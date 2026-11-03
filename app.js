@@ -40,7 +40,7 @@
     };
   }
   function emptyState() { return { folders: [], notes: [], tasks: [], events: [] }; }
-  function normalize(s) { ['folders', 'notes', 'tasks', 'events'].forEach((k) => { if (!Array.isArray(s[k])) s[k] = []; }); return s; }
+  function normalize(s) { ['folders', 'notes', 'tasks', 'events'].forEach((k) => { if (!Array.isArray(s[k])) s[k] = []; }); s.notes.forEach((n) => { n.archived = !!n.archived; }); return s; }
   function load() {
     try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; }
   }
@@ -79,6 +79,8 @@
       if (n.deleted) return false;
       if (view.type === 'trash') { if (!n.trashed) return false; }
       else if (n.trashed) return false;
+      if (view.type === 'archive') { if (!n.archived) return false; }
+      else if (n.archived) return false;
       if (view.type === 'pinned' && !n.pinned) return false;
       if (view.type === 'folder' && n.folder !== view.id) return false;
       if (view.type === 'tag' && !info(n).tags.includes(view.id)) return false;
@@ -100,7 +102,7 @@
 
   function renderSidebar() {
     const alive = state.notes.filter((n) => !n.deleted);
-    const live = alive.filter((n) => !n.trashed);
+    const live = alive.filter((n) => !n.trashed && !n.archived);
     const folders = state.folders.filter((f) => !f.deleted);
     const is = (t, id) => view.type === t && view.id === id ? ' active' : '';
     const navItem = (type, id, label, count, extra = '', ic = '') =>
@@ -116,7 +118,8 @@
       navItem('events', undefined, 'Events', pc.events || '', '', 'events') +
       '<div class="nav-sep"></div>' +
       navItem('pinned', undefined, 'Favorites', live.filter((n) => n.pinned).length, '', 'star') +
-      navItem('trash', undefined, 'Trash', alive.length - live.length, '', 'trash');
+      navItem('archive', undefined, 'Archive', alive.filter((n) => n.archived && !n.trashed).length, '', 'archive') +
+      navItem('trash', undefined, 'Trash', alive.filter((n) => n.trashed).length, '', 'trash');
     $('#navFolders').innerHTML = folders.map((f) =>
       navItem('folder', f.id, f.name, live.filter((n) => n.folder === f.id).length, '<button class="del" data-del-folder title="Delete folder">✕</button>')).join('');
     const tagCount = {};
@@ -134,11 +137,13 @@
     bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
     star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
     trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+    archive: '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v11h14V9M10 13h4"/>',
   };
 
   function viewTitle() {
     if (view.type === 'all') return 'All Notes';
     if (view.type === 'pinned') return 'Favorites';
+    if (view.type === 'archive') return 'Archive';
     if (view.type === 'trash') return 'Trash';
     if (view.type === 'tag') return '#' + view.id;
     const f = state.folders.find((x) => x.id === view.id);
@@ -149,7 +154,7 @@
     $('#listTitle').textContent = viewTitle();
     const list = visibleNotes();
     if (!list.length) {
-      $('#notes').innerHTML = `<div class="no-notes">${query ? 'No matching notes' : view.type === 'trash' ? 'Trash is empty' : 'No notes yet'}</div>`;
+      $('#notes').innerHTML = `<div class="no-notes">${query ? 'No matching notes' : view.type === 'trash' ? 'Trash is empty' : view.type === 'archive' ? 'Archive is empty' : 'No notes yet'}</div>`;
       return;
     }
     let html = '', lastPinned = null;
@@ -160,7 +165,7 @@
       const i = info(n);
       html += `<div class="note${n.id === currentId ? ' active' : ''}" data-id="${n.id}" tabindex="0">
         <div class="t">${esc(i.title)}</div>
-        <div class="m"><span class="d">${fmtDate(n.updated)}</span><span class="p">${esc(i.preview) || 'No additional text'}</span></div></div>`;
+        <div class="m"><span class="d">${fmtDate(n.updated)}</span><span class="p">${esc(i.preview) || 'No additional text'}</span></div><button class="kebab" data-kebab="${n.id}" aria-label="More actions for this note" aria-haspopup="menu" title="More actions">⋮</button></div>`;
     }
     $('#notes').innerHTML = html;
   }
@@ -204,7 +209,7 @@
     ['tasks', 'Tasks', '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12l2.5 2.5 4.5-5"/>'],
     ['reminders', 'Reminders', '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 21h4"/>']];
   function renderTabbar() {
-    const cur = ['folder', 'tag', 'pinned', 'trash'].includes(view.type) ? 'all' : view.type;
+    const cur = ['folder', 'tag', 'pinned', 'trash', 'archive'].includes(view.type) ? 'all' : view.type;
     $('#tabbar').innerHTML = TABS.map(([t, label, icon]) => `<button data-tab="${t}" class="${t === cur ? 'on' : ''}"${t === cur ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><span>${label}</span></button>`).join('');
   }
   function setView(type, id) {
@@ -241,7 +246,7 @@
   function newNote() {
     const now = Date.now();
     const n = { id: uid(), folder: view.type === 'folder' ? view.id : null, pinned: false, trashed: false, created: now, updated: now, html: '' };
-    if (view.type === 'trash' || view.type === 'pinned' || Planner.isView(view.type)) { view = { type: 'all' }; showPlanner(false); }
+    if (view.type === 'trash' || view.type === 'pinned' || view.type === 'archive' || Planner.isView(view.type)) { view = { type: 'all' }; showPlanner(false); }
     query = ''; $('#search').value = '';
     state.notes.unshift(n);
     persist(); renderAll(); openNote(n.id);
@@ -274,6 +279,62 @@
     const n = byId(id); n.deleted = true; n.html = ''; touch(n);   // tombstone so other devices delete it too
     persist(); renderAll();
     if (id === currentId) openNote(null);
+  }
+
+  function toggleArchive(id) {
+    const n = byId(id); if (!n) return;
+    n.archived = !n.archived; if (n.archived) n.pinned = false; touch(n);
+    persist(); renderAll();
+    if (id === currentId && n.archived) openNote(null);
+    Planner.toast(n.archived ? 'Note archived' : 'Note unarchived');
+  }
+
+  // a note's title is the first line of its content, so renaming rewrites that line in place
+  function renameNote(id, title) {
+    const n = byId(id); if (!n) return;
+    const holder = document.createElement('div');
+    holder.innerHTML = n.html || '';
+    const tw = document.createTreeWalker(holder, NodeFilter.SHOW_TEXT);
+    let tn = null;
+    while (tw.nextNode()) { if (tw.currentNode.nodeValue.trim()) { tn = tw.currentNode; break; } }
+    if (tn) {
+      const host = tn.parentElement;
+      if (host && !host.querySelector('div,p,h1,h2,h3,h4,h5,h6,li,ul,ol,table,figure,img,blockquote,pre,hr')) host.textContent = title;
+      else tn.nodeValue = title;
+    } else {
+      const d = document.createElement('div'); d.textContent = title; holder.prepend(d);
+    }
+    n.html = holder.innerHTML;
+    if (n._info) n._info.src = null;              // force the cached title/preview to rebuild
+    touch(n); persist(); renderAll();
+    if (id === currentId) openNote(id);
+  }
+
+  function startRename(id) {
+    const n = byId(id); if (!n || n.trashed) return;
+    if (currentId !== id) openNote(id);
+    const row = document.querySelector(`.note[data-id="${id}"]`);
+    if (!row || row.querySelector('.rename-input')) return;
+    const t = row.querySelector('.t'); if (!t) return;
+    const input = document.createElement('input');
+    input.className = 'rename-input'; input.type = 'text'; input.value = info(n).title;
+    input.setAttribute('aria-label', 'Rename note');
+    t.replaceWith(input);
+    input.focus(); input.select();
+    let done = false;
+    const commit = (save) => {
+      if (done) return; done = true;
+      const v = input.value.trim();
+      if (save && v && v !== info(n).title) renameNote(id, v); else renderList();
+    };
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+      else if (e.key === 'Escape') commit(false);
+    });
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('dblclick', (e) => e.stopPropagation());
+    input.addEventListener('blur', () => commit(true));
   }
 
   // ---------- Editor commands ----------
@@ -476,8 +537,25 @@
   }
 
   // ---------- Events ----------
+  let lastTap = { id: null, t: 0 };
   $('#notes').addEventListener('click', (e) => {
-    const el = e.target.closest('.note'); if (el) openNote(el.dataset.id);
+    const kb = e.target.closest('[data-kebab]');
+    if (kb) {
+      e.stopPropagation();
+      const r = kb.getBoundingClientRect();
+      openNoteMenu(kb.dataset.kebab, r.left, r.bottom + 4);
+      return;
+    }
+    const el = e.target.closest('.note'); if (!el) return;
+    if (el.querySelector('.rename-input')) return;      // a rename is in progress on this row
+    const now = performance.now();                       // double click / double tap a note to rename it
+    if (lastTap.id === el.dataset.id && now - lastTap.t < 350) { lastTap = { id: null, t: 0 }; startRename(el.dataset.id); return; }
+    lastTap = { id: el.dataset.id, t: now };
+    openNote(el.dataset.id);
+  });
+  $('#notes').addEventListener('dblclick', (e) => {
+    const el = e.target.closest('.note');
+    if (el && !el.querySelector('.rename-input')) startRename(el.dataset.id);
   });
 
   // ---------- Right-click menu for notes ----------
@@ -536,6 +614,7 @@
     const folders = state.folders.filter((f) => !f.deleted);
     return [
       { label: 'Open', icon: '↗', run: () => openNote(n.id) },
+      { label: 'Rename', icon: '✎', run: () => startRename(n.id) },
       { label: n.pinned ? 'Remove from Favorites' : 'Add to Favorites', icon: n.pinned ? '☆' : '★', run: () => togglePin(n.id) },
       { label: 'Duplicate', icon: '⧉', run: () => duplicateNote(n.id) },
       { label: 'Move to folder', icon: '▤', sub: [{ label: 'No folder', icon: n.folder ? '' : '✓', run: () => moveNote(n.id, null) }]
@@ -545,6 +624,7 @@
       { label: 'Share…', icon: Media.ICONS.share, run: () => Media.share(n.id) },
       { label: 'Copy text', icon: '⎘', run: () => copyNoteText(n.id) },
       { label: 'Export', icon: '⤓', sub: exportItems(n.id) },
+      { label: n.archived ? 'Unarchive' : 'Archive', icon: '🗄', run: () => toggleArchive(n.id) },
       { sep: true },
       { label: 'Move to Trash', icon: '🗑', run: () => trash(n.id, true) },
       { label: 'Delete permanently…', icon: '✕', danger: true, run: () => deleteForever(n.id) },
@@ -1028,7 +1108,7 @@
     }
     await pool(need, 4, async ([nid, f, ru]) => {
       const j = await (await drive(`/drive/v3/files/${f.id}?alt=media`)).json();
-      const n = { id: nid, folder: j.folder || null, pinned: !!j.pinned, trashed: !!j.trashed, deleted: false, html: j.html || '', created: j.created || ru, updated: ru, sv: ru, fid: f.id };
+      const n = { id: nid, folder: j.folder || null, pinned: !!j.pinned, trashed: !!j.trashed, archived: !!j.archived, deleted: false, html: j.html || '', created: j.created || ru, updated: ru, sv: ru, fid: f.id };
       const l = byId(nid);
       if (l) Object.assign(l, n); else state.notes.push(n);
       changed.add(nid);
@@ -1088,7 +1168,7 @@
         }
         delete n.fid; n.sv = u; return;
       }
-      const content = { id: n.id, folder: n.folder || null, pinned: !!n.pinned, trashed: !!n.trashed, html: n.html || '', created: n.created || u, updated: u };
+      const content = { id: n.id, folder: n.folder || null, pinned: !!n.pinned, trashed: !!n.trashed, archived: !!n.archived, html: n.html || '', created: n.created || u, updated: u };
       const meta = { name: fileName(n), appProperties: { kind: 'note', nid: n.id, updated: String(u) } };
       if (n.fid) {
         try { await upload('PATCH', `/upload/drive/v3/files/${n.fid}?uploadType=multipart&fields=id`, meta, content); }
