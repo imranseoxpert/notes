@@ -1,5 +1,6 @@
 # Builds the Mac and Windows apps when a version tag (v1.0.0, v1.1.0, ...) is pushed, and publishes them
-# as a GitHub Release. These public builds carry no Google credentials: people add their own in the app.
+# as a GitHub Release. The Google sign-in keys come from the repository's Actions secrets (never from the source),
+# so the downloads open straight to "Continue with Google". Without those secrets, people add their own in the app.
 name: Release
 on:
   push:
@@ -11,12 +12,20 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Google sign-in keys (from the repository's Actions secrets)
+        env:
+          WEB_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          DESKTOP_ID: ${{ secrets.GOOGLE_DESKTOP_CLIENT_ID }}
+          DESKTOP_SECRET: ${{ secrets.GOOGLE_DESKTOP_CLIENT_SECRET }}
+        run: |
+          printf "window.NOTES_CONFIG = { googleWebClientId: '%s', googleDesktopClientId: '%s', googleDesktopClientSecret: '%s' };\n" \
+            "$WEB_ID" "$DESKTOP_ID" "$DESKTOP_SECRET" > config.local.js
       - name: Mac app
-        run: PUBLIC=1 bash macapp/build.sh
+        run: bash macapp/build.sh
       - name: Windows app and installer
         run: |
           brew install makensis
-          PUBLIC=1 bash winapp/build.sh
+          bash winapp/build.sh
       - name: Web app
         run: bash webapp/build.sh
       - name: Publish the release

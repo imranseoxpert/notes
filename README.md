@@ -41,7 +41,9 @@ A fast, private notes app and day planner for **Mac**, **Windows**, **iPhone** a
 
 ## Turn on Google Drive sync
 
-Sync uses **your own** free Google Cloud credentials, so your data goes only between your devices and your Drive. In the app, open the sidebar and choose **Set up Google Drive sync**: it tells you exactly what to create and lets you paste it in. The full walkthrough (about 15 minutes) is in [SETUP.md](SETUP.md).
+The Mac and Windows downloads from [Releases](https://github.com/imranseoxpert/notes/releases/latest) are ready to go: choose **Continue with Google** (or type your Google email) and your notes sync through your own Google Drive. Your data goes only between your devices and your Drive.
+
+Building it yourself or running your own copy? Use your own free Google Cloud credentials: in the app, open the sidebar and choose **Set up Google Drive sync** (it tells you exactly what to create and lets you paste it in), or put them in `config.local.js`. The full walkthrough (about 15 minutes) is in [SETUP.md](SETUP.md). For release builds, the keys live in the repository's Actions secrets (`GOOGLE_DESKTOP_CLIENT_ID`, `GOOGLE_DESKTOP_CLIENT_SECRET`, `GOOGLE_WEB_CLIENT_ID`), never in the source.
 
 The app only asks for the `drive.file` permission: it can see the files it created, never the rest of your Drive.
 

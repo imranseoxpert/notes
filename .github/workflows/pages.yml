@@ -19,6 +19,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Google sign-in keys (from the repository's Actions secrets)
+        env:
+          WEB_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          DESKTOP_ID: ${{ secrets.GOOGLE_DESKTOP_CLIENT_ID }}
+          DESKTOP_SECRET: ${{ secrets.GOOGLE_DESKTOP_CLIENT_SECRET }}
+        run: |
+          printf "window.NOTES_CONFIG = { googleWebClientId: '%s', googleDesktopClientId: '%s', googleDesktopClientSecret: '%s' };\n" \
+            "$WEB_ID" "$DESKTOP_ID" "$DESKTOP_SECRET" > config.local.js
       - name: Build the web app
         run: bash webapp/build.sh
       - uses: actions/configure-pages@v5
