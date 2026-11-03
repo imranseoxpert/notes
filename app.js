@@ -40,7 +40,7 @@
     };
   }
   function emptyState() { return { folders: [], notes: [], tasks: [], events: [] }; }
-  function normalize(s) { ['folders', 'notes', 'tasks', 'events'].forEach((k) => { if (!Array.isArray(s[k])) s[k] = []; }); return s; }
+  function normalize(s) { ['folders', 'notes', 'tasks', 'events'].forEach((k) => { if (!Array.isArray(s[k])) s[k] = []; }); s.notes.forEach((n) => { n.archived = !!n.archived; }); return s; }
   function load() {
     try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; }
   }

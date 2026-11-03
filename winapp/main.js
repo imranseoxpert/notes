@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, net, shell, Menu, ipcMain, Tray, nativeImage, Notification, screen, dialog, nativeTheme, clipboard } = require('electron');
+const { app, BrowserWindow, protocol, net, shell, Menu, ipcMain, Tray, nativeImage, Notification, screen, dialog, nativeTheme, clipboard, ClipboardItem } = require('electron');
 const os = require('os');
 const http = require('http');
 const fs = require('fs');
@@ -72,10 +72,12 @@ app.on('second-instance', showWindow);
 app.on('before-quit', () => { quitting = true; });
 ipcMain.handle('win:focus', () => { showWindow(); return 'ok'; });
 // Copy Image: a real picture on the Windows clipboard, so it pastes into any app (Word, Paint, chat apps…)
-ipcMain.handle('clip:image', (_e, b64) => {
-  const img = nativeImage.createFromBuffer(Buffer.from(b64, 'base64'));
-  if (img.isEmpty()) return "couldn't read the picture";
-  clipboard.writeImage(img);
+// Electron 44 removed clipboard.writeImage; the clipboard now takes ClipboardItem entries (async, like the web API).
+ipcMain.handle('clip:image', async (_e, b64) => {
+  const buf = Buffer.from(b64, 'base64');
+    if (nativeImage.createFromBuffer(buf).isEmpty()) return "couldn't read the picture";
+    if (typeof clipboard.writeImage === 'function') clipboard.writeImage(nativeImage.createFromBuffer(buf));   // older Electron
+    else await clipboard.write([new ClipboardItem({ 'image/png': new Blob([buf], { type: 'image/png' }) })]);
   return 'ok';
 });
 // Light / Dark / System from the in-app switch: title bar, menus and dialogs follow it ('system' follows Windows).
