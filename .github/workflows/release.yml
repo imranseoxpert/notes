@@ -13,8 +13,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Mac app
         run: PUBLIC=1 bash macapp/build.sh
-      - name: Windows app
-        run: PUBLIC=1 bash winapp/build.sh
+      - name: Windows app and installer
+        run: |
+          brew install makensis
+          PUBLIC=1 bash winapp/build.sh
       - name: Web app
         run: bash webapp/build.sh
       - name: Publish the release
@@ -22,4 +24,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" --title "Notes $GITHUB_REF_NAME" --generate-notes \
-            macapp/build/Notes.dmg winapp/build/Notes-Windows-x64.zip webapp/build/Notes-iPhone-Web.zip
+            macapp/build/Notes.dmg winapp/build/Notes-Setup-x64.exe winapp/build/Notes-Windows-x64.zip webapp/build/Notes-iPhone-Web.zip

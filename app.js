@@ -317,6 +317,7 @@
       case 'image': Blocks.pick('image/*'); return;
       case 'attach': Blocks.pick(''); return;
       case 'media': Media.openMenu($('#toolbar [data-cmd="media"]')); return;
+      case 'sketch': Media.addSketch(); return;
       case 'quote': block('blockquote'); break;
       case 'code': block('pre'); break;
       case 'ul': document.execCommand('insertUnorderedList'); break;

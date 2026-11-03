@@ -59,7 +59,9 @@ function createTray() {
 function ensureStartMenuShortcut() {
   try {
     const lnk = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Notes.lnk');
-    shell.writeShortcutLink(lnk, fs.existsSync(lnk) ? 'replace' : 'create', { target: process.execPath, appUserModelId: APP_ID, description: 'Notes, tasks and calendar' });
+    const icon = path.join(__dirname, 'notes.ico');                  // the Notes icon rather than the runtime's own
+    shell.writeShortcutLink(lnk, fs.existsSync(lnk) ? 'replace' : 'create', { target: process.execPath, appUserModelId: APP_ID, description: 'Notes, tasks and calendar',
+      ...(fs.existsSync(icon) ? { icon, iconIndex: 0 } : {}) });
   } catch {}
 }
 

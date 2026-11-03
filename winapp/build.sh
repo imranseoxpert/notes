@@ -21,6 +21,22 @@ cp main.js preload.js package.json $APPDIR/
 cp ../index.html ../styles.css ../app.js ../planner.js ../blocks.js ../export.js ../media.js ../manifest.webmanifest $APPDIR/web/
 cp -R ../icons $APPDIR/web/       # no sw.js: service workers aren't needed in the desktop app
 cp $CONFIG $APPDIR/web/config.js
+# The Notes icon for shortcuts and the installer: an .ico holding the 192 px PNG
+python3 -I - ../icons/icon-192.png $APPDIR/notes.ico <<'PY'
+import struct, sys
+png = open(sys.argv[1], 'rb').read()
+w, h = struct.unpack('>II', png[16:24])
+open(sys.argv[2], 'wb').write(struct.pack('<HHH', 0, 1, 1) + struct.pack('<BBBBHHII', w % 256, h % 256, 0, 0, 1, 32, len(png), 22) + png)
+PY
 rm -f build/Notes-Windows-x64.zip
 (cd build && zip -qr Notes-Windows-x64.zip Notes)
 echo "Built build/Notes-Windows-x64.zip"
+
+# Installer (Notes-Setup-x64.exe) when NSIS is available: `brew install makensis` / `apt install nsis`
+if command -v makensis >/dev/null; then
+  VERSION=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' package.json)
+  makensis -V2 -DVERSION="$VERSION" installer.nsi
+  echo "Built build/Notes-Setup-x64.exe"
+else
+  echo "Skipped the installer (makensis isn't installed)"
+fi

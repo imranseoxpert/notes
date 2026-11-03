@@ -14,7 +14,7 @@ A fast, private notes app and day planner for **Mac**, **Windows**, **iPhone** a
 
 **Media**
 - Photos, videos, PDFs (with preview), audio and any file: pick, paste or drop
-- Record audio, take a photo, scan documents into a PDF, and draw sketches, right in a note
+- Record audio, take a photo, scan documents into a PDF, and draw sketches (pen, highlighter, eraser; mouse, trackpad, Apple Pencil or finger), right in a note
 - Right-click a picture to save it, copy it (pastes into any app) or share it
 
 **Planner**
@@ -35,7 +35,7 @@ A fast, private notes app and day planner for **Mac**, **Windows**, **iPhone** a
 | Platform | How |
 | --- | --- |
 | **Mac** (Apple silicon) | Download `Notes.dmg` from the [latest release](https://github.com/imranseoxpert/notes/releases/latest), open it and drag Notes to Applications. The app isn't notarized by Apple, so the first time, right-click Notes → **Open** → **Open**. |
-| **Windows** (64-bit) | Download `Notes-Windows-x64.zip`, unzip it and run `Notes.exe`. If SmartScreen warns, choose **More info** → **Run anyway**. |
+| **Windows** (64-bit) | Download `Notes-Setup-x64.exe` and run it: it installs Notes with Start Menu and desktop shortcuts (no admin rights needed; uninstall from Settings → Apps). If SmartScreen warns, choose **More info** → **Run anyway**. Prefer no installer? Unzip `Notes-Windows-x64.zip` and run `Notes.exe`. |
 | **iPhone / iPad** | Open [the web app](https://imranseoxpert.github.io/notes/) in **Safari**, tap Share → **Add to Home Screen**. |
 | **Any browser** | Open [the web app](https://imranseoxpert.github.io/notes/). |
 
@@ -57,7 +57,7 @@ python3 -m http.server 5173        # then open http://localhost:5173
 bash macapp/build.sh               # → macapp/build/Notes.app, Notes.dmg
 
 # Windows app (downloads the Electron runtime; builds on Mac or Linux too)
-bash winapp/build.sh               # → winapp/build/Notes-Windows-x64.zip
+bash winapp/build.sh               # → winapp/build/Notes-Windows-x64.zip, plus Notes-Setup-x64.exe if NSIS is installed
 
 # Web app folder to host anywhere
 bash webapp/build.sh               # → webapp/build/notes-web

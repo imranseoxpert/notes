@@ -119,8 +119,9 @@ button, input, select { font: inherit; color: inherit; }
 /* Narrow screens */
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; position: relative; }
-  .sidebar { position: absolute; inset: 0 auto 0 0; width: 260px; z-index: 5; transform: translateX(-100%); transition: transform .2s; box-shadow: 2px 0 12px rgba(0,0,0,.2); }
-  .app.show-side .sidebar { transform: none; }
+  /* closed: off screen and without its shadow (the shadow would darken the left edge of the app) */
+  .sidebar { position: absolute; inset: 0 auto 0 0; width: 260px; z-index: 5; transform: translateX(-100%); visibility: hidden; transition: transform .2s, visibility .2s; }
+  .app.show-side .sidebar { transform: none; visibility: visible; box-shadow: 2px 0 12px rgba(0,0,0,.2); }
   .editor-pane { display: none; }
   .app.editing .editor-pane { display: flex; }
   .app.editing .list-pane { display: none; }
@@ -151,10 +152,13 @@ button, input, select { font: inherit; color: inherit; }
 
 /* Phone / installed-app polish */
 @media (max-width: 900px) {
-  body { padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+  /* each screen's own colour runs up under the iPhone status bar, so there's no band of a different shade at the top */
+  body { padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+  .list-pane, .editor-pane, .planner { padding-top: env(safe-area-inset-top); }
   .list-head input, .folder-input { font-size: 16px; }
   .icon-btn, .toolbar button { min-width: 36px; height: 36px; }
   .toolbar { flex-wrap: nowrap; overflow-x: auto; flex-basis: 100%; order: 3; -webkit-overflow-scrolling: touch; }
+  .toolbar .tb-m { order: -1; }                  /* photo, sketch and media first, without scrolling */
   .topbar { gap: 4px; }
   .actions { margin-left: auto; }
   .editor { padding: 20px 18px calc(120px + env(safe-area-inset-bottom)); }
