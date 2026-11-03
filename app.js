@@ -1453,13 +1453,22 @@
   }
   function setBusy(b) { ['#googleBtn', '#emailBtn'].forEach((s) => { $(s).disabled = b; }); }
 
+  // Notes on this device are never deleted by signing in or out. When a different Google account signs in than
+  // the one used here before, everything on this device is kept and uploaded to the new account as new items:
+  // the links to the old account's Drive files and calendar events are dropped, so nothing looks "deleted elsewhere".
+  function forgetDriveLinks() {
+    state.notes = state.notes.filter((n) => !n.deleted);        // tombstones belonged to the old account
+    state.notes.forEach((n) => { delete n.fid; delete n.sv; });
+    state.folders = state.folders.filter((f) => !f.deleted);
+    state.folders.forEach((f) => { delete f.sv; });
+    state.tasks.concat(state.events).forEach((x) => { delete x.sv; delete x.gid; delete x.gup; delete x.gUpdated; delete x.grec; });
+    Blocks.store.all().then((recs) => recs.forEach((r) => { if (r.fid) { r.fid = null; Blocks.store.put(r).catch(() => {}); } })).catch(() => {});
+    localStorage.removeItem(metaKey);                          // the old account's Drive folder, calendar setting, sync times
+    persist(true);
+  }
   function setUser(email) {
     const meta = getMeta();
-    if (meta.uid && meta.uid !== email) {                     // a different Google account was used here before
-      state = emptyState();
-      localStorage.removeItem(metaKey);
-      persist(true); openNote(null); renderAll();
-    }
+    if (meta.uid && meta.uid !== email) forgetDriveLinks();  // a different Google account was used here before
     user = { email }; needsReauth = false;
     setMeta({ uid: email, skip: false });
     $('#auth').hidden = true;
@@ -1477,18 +1486,19 @@
     setBusy(false);
   }
 
+  // Signing out only stops syncing. Every note, task and event stays on this device (under Notes, as before)
+  // until you delete it yourself; changes made while signed out upload the next time you sign in.
   async function signOut() {
     await syncNow();
-    const unsynced = state.notes.filter((n) => n.sv !== n.updated).length;
-    const msg = unsynced
-      ? `${unsynced} change(s) haven't reached Google Drive yet and will be lost if you sign out. Sign out anyway?`
-      : 'Sign out? Your notes stay in Google Drive and are removed from this device.';
+    const unsynced = state.notes.filter((n) => !n.deleted && n.sv !== n.updated).length;
+    const msg = 'Sign out of Google Drive sync?\n\nYour notes, tasks and events stay on this device, and nothing is deleted.' +
+      (unsynced ? ` ${unsynced} note change(s) haven't reached Google Drive yet: they stay here and upload the next time you sign in.` : '');
     if (!confirm(msg)) return;
-    localStorage.removeItem(authKey); localStorage.removeItem(metaKey);
+    localStorage.removeItem(authKey);
     auth = null; user = null; needsReauth = false;
-    state = emptyState();
-    persist(true); openNote(null); renderAll(); renderAccount();
-    showAuth();
+    setMeta({ skip: true });                                   // remembers which account this device used (uid)
+    renderAll(); renderAccount();
+    Planner.toast('Signed out. Your notes are still here on this device.');
   }
 
   // Google sign-in credentials typed into the app (for builds without them in config.js, like the public
@@ -1540,7 +1550,7 @@
     $('#acctBtn').onclick = () => (user ? signInFlow(user.email) : showAuth());
     $('#signOutBtn').onclick = signOut;
     if (!native && /[#&](access_token|error)=/.test(location.hash)) finishRedirect();   // back from Google's sign-in page
-    else if (auth) { if (!renewIfDue()) syncNow(); } else if (!getMeta().skip) showAuth();
+    else if (auth) { if (!renewIfDue()) syncNow(); }       // signed out: no prompt; "Sign in to sync" is at the bottom left
     const kick = () => { if (auth && !document.hidden) syncNow(); };
     addEventListener('online', kick);
     addEventListener('focus', kick);
