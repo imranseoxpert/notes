@@ -10,6 +10,8 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: t
 
 const root = path.join(__dirname, 'web');
 const APP_ID = 'com.imran.notes';
+// The yellow Notes icon (multi-size .ico made by winicon.py) for the window, tray and notifications
+const APP_ICON = fs.existsSync(path.join(__dirname, 'notes.ico')) ? path.join(__dirname, 'notes.ico') : path.join(__dirname, 'web', 'icons', 'icon-512.png');
 let win = null, tray = null, quitting = false, toldAboutTray = false;
 if (process.platform === 'win32') app.setAppUserModelId(APP_ID);   // lets Windows show our reminder notifications
 
@@ -23,7 +25,7 @@ const runInPage = (js) => { showWindow(); win.webContents.executeJavaScript(js);
 function createWindow() {
   win = new BrowserWindow({
     width: 1100, height: 720, minWidth: 700, minHeight: 420,
-    title: 'Notes', icon: path.join(root, 'icons', 'icon-512.png'),
+    title: 'Notes', icon: APP_ICON,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1c1c1e' : '#ffffff', autoHideMenuBar: true,
     // backgroundThrottling off: reminder timers must stay exact while the window is hidden in the tray
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false }
@@ -42,7 +44,7 @@ function createWindow() {
 }
 
 function createTray() {
-  const icon = nativeImage.createFromPath(path.join(root, 'icons', 'icon-192.png')).resize({ width: 16, height: 16 });
+  const icon = nativeImage.createFromPath(APP_ICON).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
   tray.setToolTip('Notes');
   tray.setContextMenu(Menu.buildFromTemplate([
@@ -119,7 +121,7 @@ function alarmAction(r, popup, action) {
 }
 function showAlarm(r) {
   if (Notification.isSupported()) {
-    const n = new Notification({ title: r.title, body: r.body, icon: path.join(root, 'icons', 'icon-192.png'), timeoutType: 'never' });
+    const n = new Notification({ title: r.title, body: r.body, icon: APP_ICON, timeoutType: 'never' });
     n.on('click', () => alarmAction(r, null, 'open'));
     n.show();
   }
