@@ -49,6 +49,7 @@ try { var t = localStorage.getItem('notes-theme'); document.documentElement.data
       <button class="icon-btn menu-btn" id="menuBtn" title="Sidebar">☰</button>
       <input type="search" id="search" placeholder="Search notes">
       <button class="icon-btn" id="dailyBtn" title="Today’s daily note">📅</button>
+      <button class="icon-btn sketch-btn" id="newSketch" title="New sketch: a note you draw in" aria-label="New sketch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20c2-1 3.5-3 5-3s1.5 2 3 2 2.5-2 4-2"/><path d="M14.5 4.5l5 5L11 18H6v-5z"/></svg></button>
       <button class="icon-btn" id="newNote" title="New note (Ctrl/Cmd+Alt+N)" aria-label="New note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 4H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-4.5"/><path d="M18.1 3.4a2 2 0 0 1 2.8 2.8l-8.3 8.3-3.6.9.9-3.6z"/></svg></button>
     </div>
     <div class="list-title" id="listTitle"></div>
@@ -85,7 +86,7 @@ try { var t = localStorage.getItem('notes-theme'); document.documentElement.data
           <button data-cmd="link" title="Link (Ctrl/Cmd+K)">🔗</button>
           <button data-cmd="hr" title="Divider">―</button>
           <button data-cmd="image" title="Add images (or paste / drop them into the note)" class="tb-image tb-m" aria-label="Add images"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg></button>
-          <button data-cmd="sketch" title="Add a sketch: draw with mouse, trackpad, pen or finger" class="tb-image tb-m" aria-label="Add sketch"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20c2-1 3.5-3 5-3s1.5 2 3 2 2.5-2 4-2"/><path d="M14.5 4.5l5 5L11 18H6v-5z"/></svg></button>
+          <button data-cmd="sketch" title="Add a sketch: draw with mouse, trackpad, pen or finger" class="tb-image tb-m tb-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20c2-1 3.5-3 5-3s1.5 2 3 2 2.5-2 4-2"/><path d="M14.5 4.5l5 5L11 18H6v-5z"/></svg><span>Sketch</span></button>
           <button data-cmd="media" title="Media: photo or video, audio recording, file, camera, document scan, sketch" class="tb-image tb-m" aria-label="Media" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.5l-8.1 8.1a5 5 0 0 1-7.1-7.1l8.5-8.5a3.4 3.4 0 0 1 4.8 4.8l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></svg></button>
         </div>
         <div class="actions">

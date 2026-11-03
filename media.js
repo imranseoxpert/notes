@@ -375,7 +375,7 @@
 
   // ---------- Add Sketch ----------
   const INKS = ['#1d1d1f', '#8e8e93', '#ff3b30', '#ff9500', '#ffcc00', '#34c759', '#007aff', '#af52de'];
-  function addSketch() {
+  function addSketch({ onCancel } = {}) {                // onCancel: closed without adding a drawing
     keepCaret();
     const m = modal('md-sketch', head('Add Sketch') + `
       <div class="sk-tools">
@@ -393,7 +393,8 @@
       </div>
       <div class="sk-paper"><canvas></canvas></div>
       <div class="md-foot"><span class="md-hint">Draw with your mouse, trackpad, pen or finger.</span><span class="grow"></span><button class="pl-btn" data-x="close">Cancel</button><button class="pl-btn primary" data-x="save" disabled>Add to note</button></div>`,
-    { sticky: true, onClose: () => ro.disconnect() });
+    { sticky: true, onClose: () => { ro.disconnect(); if (!saved && onCancel) onCancel(); } });
+    let saved = false;
     const cv = $('canvas', m.el), paper = $('.sk-paper', m.el), g = cv.getContext('2d');
     const strokes = [], undone = [];
     let tool = 'pen', ink = INKS[0], width = 3, cur = null, queued = false;
@@ -478,6 +479,7 @@
       strokes.forEach((s) => paint(lg, s));
       const og = out.getContext('2d'); og.fillStyle = '#fff'; og.fillRect(0, 0, out.width, out.height); og.drawImage(layer, 0, 0);
       const blob = await blobOf(out, 'image/png');
+      saved = true;
       m.close();
       insert([new File([blob], `Sketch ${stamp()}.png`, { type: 'image/png' })]);
     }

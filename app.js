@@ -789,6 +789,21 @@
   $('#backBtn').onclick = () => openNote(null);
   $('#newNote').onclick = newNote;
   $('#emptyNew').onclick = newNote;
+  // New sketch: a note titled "Sketch" with the drawing pad open; cancelling without drawing removes the empty note
+  $('#newSketch').onclick = () => {
+    newNote();
+    const id = currentId, ed = $('#editor');
+    ed.innerHTML = '<h1>Sketch</h1><div><br></div>';
+    onEdit();
+    const r = document.createRange(); r.selectNodeContents(ed.lastChild); r.collapse(true);
+    getSelection().removeAllRanges(); getSelection().addRange(r);
+    Media.addSketch({ onCancel: () => {
+      const n = byId(id); if (!n || /<figure/.test(n.html)) return;
+      n.deleted = true; n.html = ''; touch(n); persist();          // a tombstone, in case it already synced
+      if (currentId === id) openNote(null);
+      renderAll();
+    } });
+  };
   $('#tabbar').onclick = (e) => { const b = e.target.closest('[data-tab]'); if (b) setView(b.dataset.tab); };
   renderTabbar();
 
