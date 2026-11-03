@@ -83,6 +83,14 @@ Releases are built by GitHub Actions: push a tag like `v1.1.0` and the Mac, Wind
 
 There's no backend. Notes are stored in your browser / app storage and, if you turn on sync, as files in your own Google Drive. Nothing is sent anywhere else. Notes in Drive are not end-to-end encrypted.
 
+## Contributors
+
+| | Contributor | Role |
+| --- | --- | --- |
+| <img src="https://github.com/imranseoxpert.png" width="40"> | [**imranseoxpert**](https://github.com/imranseoxpert) | Creator and maintainer |
+| <img src="https://github.com/claude.png" width="40"> | [**Claude**](https://github.com/claude) (Anthropic) | Contributor: app code, desktop wrappers, sync, builds |
+| | **Muse** (Meta) | Contributor |
+
 ## License
 
 [MIT](LICENSE)
