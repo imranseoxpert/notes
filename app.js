@@ -19,7 +19,9 @@
   const syncEnabled = !!googleClientId;
   const VIEW_KEY = KEY + '-view';
   let state = normalize(load() || (syncEnabled ? emptyState() : seed()));
-  let view = { type: localStorage.getItem(VIEW_KEY) || 'today' };   // planner: today | upcoming | calendar | tasks | events; notes: all | pinned | trash | folder | tag
+  // planner: today | upcoming | calendar | tasks | events; notes: all | pinned | trash | folder | tag
+  // Phones always open on Notes; wider screens reopen the last section (Notes the first time).
+  let view = { type: (innerWidth > 900 && localStorage.getItem(VIEW_KEY)) || 'all' };
   let currentId = null;
   let query = '';
   let saveTimer = null;
