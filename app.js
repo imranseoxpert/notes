@@ -499,18 +499,19 @@
       openNoteMenu(el.dataset.id, r.right - 230, r.bottom + 4);
       return;
     }
-    if (innerWidth <= 900) {                             // a short wait so a double-tap renames instead of opening
-      if (tap && tap.id === el.dataset.id) { clearTimeout(tap.t); tap = null; startRename(el.dataset.id); return; }
-      if (tap) clearTimeout(tap.t);
-      tap = { id: el.dataset.id, t: setTimeout(() => { tap = null; openNote(el.dataset.id); }, 260) };
+    // Two clicks / taps on the same note within DOUBLE ms rename it. Timed here rather than with the browser's
+    // dblclick: the first click opens the note and redraws the list, and a dblclick across that redraw never fires.
+    const id = el.dataset.id, now = Date.now(), second = tap && tap.id === id && now - tap.at < DOUBLE;
+    if (tap) clearTimeout(tap.t);
+    if (second) { tap = null; startRename(id); return; }
+    if (innerWidth <= 900) {                             // phones: opening hides the list, so wait to see if a second tap comes
+      tap = { id, at: now, t: setTimeout(() => { tap = null; openNote(id); }, DOUBLE) };
       return;
     }
-    openNote(el.dataset.id);
+    tap = { id, at: now, t: null };
+    openNote(id);
   });
-  $('#notes').addEventListener('dblclick', (e) => {
-    const el = e.target.closest('.note');
-    if (el && innerWidth > 900 && !e.target.closest('.note-more, .rename-input')) startRename(el.dataset.id);
-  });
+  const DOUBLE = 400;
 
   // ---------- Right-click menu for notes ----------
   function duplicateNote(id) {
