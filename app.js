@@ -858,8 +858,50 @@
     if (e.inputType === 'insertText') markdownShortcut();
     onEdit();
   });
+  // Auto-link: a web address typed or pasted into a note becomes a link when you press Space or Enter after it
+  const URL_BEFORE_CARET = /(?:https?:\/\/|www\.)[^\s<>"]+$/i;
+  function linkifyBeforeCaret() {
+    const sel = getSelection();
+    if (!sel.rangeCount || !sel.isCollapsed) return null;
+    const node = sel.anchorNode, off = sel.anchorOffset;
+    if (!node || node.nodeType !== 3 || !editor.contains(node) || node.parentElement.closest('a, pre, code')) return null;
+    const m = node.nodeValue.slice(0, off).match(URL_BEFORE_CARET);
+    if (!m) return null;
+    const url = m[0].replace(/[.,;:!?'")\]}]+$/, '');        // a full stop or bracket after the address isn't part of it
+    if (!/^(https?:\/\/[^/\s]+\.[^\s]|https?:\/\/localhost|www\.[^.\s]+\.[^\s])/i.test(url)) return null;
+    const start = off - m[0].length;
+    const r = document.createRange();
+    r.setStart(node, start); r.setEnd(node, start + url.length);
+    const a = document.createElement('a');
+    a.href = /^www\./i.test(url) ? 'https://' + url : url;
+    a.textContent = url;
+    a.title = (navigator.platform.startsWith('Mac') ? '⌘' : 'Ctrl') + '-click to open';
+    r.deleteContents(); r.insertNode(a);
+    // the caret goes back to where it was: after the link and any punctuation that followed it
+    const rest = a.nextSibling && a.nextSibling.nodeType === 3 ? a.nextSibling : null;
+    const caret = document.createRange();
+    if (rest) caret.setStart(rest, m[0].length - url.length); else caret.setStartAfter(a);
+    caret.collapse(true); sel.removeAllRanges(); sel.addRange(caret);
+    return { a, rest, at: m[0].length - url.length };
+  }
   editor.addEventListener('keydown', (e) => {
     if (Blocks.onKeydown(e)) return;
+    if ((e.key === ' ' || e.key === 'Enter') && !e.isComposing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      const linked = linkifyBeforeCaret();
+      if (linked && e.key === ' ') {
+        // put the space in plain text after the link ourselves, so the link doesn't swallow what you type next
+        e.preventDefault();
+        const { a, rest, at } = linked;
+        let node = rest, pos = at;
+        if (node && pos < node.length) node.insertData(pos, ' ');
+        else { node = document.createTextNode(' '); (rest || a).after(node); pos = 0; }
+        const r = document.createRange(); r.setStart(node, pos + 1); r.collapse(true);
+        getSelection().removeAllRanges(); getSelection().addRange(r);
+        onEdit();
+        return;
+      }
+      if (linked) onEdit();                               // Enter: the new line starts after the link, as usual
+    }
     if (e.key === 'Enter') {
       // a new checklist item must start unchecked
       setTimeout(() => {
