@@ -1,9 +1,11 @@
 import Cocoa
 // Full-bleed square icons for the web app / iPhone Home Screen (iOS applies its own rounded mask).
+// usage: webicons <icons folder>. Drawn in RGBA (macOS can't draw into an RGB-only bitmap: it stays black);
+// every pixel is opaque, so iOS shows it as is.
 let out = CommandLine.arguments[1]
 func render(_ px: Int) -> Data {
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8,
-        samplesPerPixel: 3, hasAlpha: false, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
     let s = CGFloat(px)
