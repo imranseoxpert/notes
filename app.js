@@ -79,13 +79,15 @@
       if (n.deleted) return false;
       if (view.type === 'trash') { if (!n.trashed) return false; }
       else if (n.trashed) return false;
+      else if (view.type === 'archive') { if (!n.archived) return false; }
+      else if (n.archived) return false;                 // archived notes only show under Archive
       if (view.type === 'pinned' && !n.pinned) return false;
       if (view.type === 'folder' && n.folder !== view.id) return false;
       if (view.type === 'tag' && !info(n).tags.includes(view.id)) return false;
       if (q) { const i = info(n); if (!(i.title + ' ' + i.text).toLowerCase().includes(q)) return false; }
       return true;
     });
-    list.sort((a, b) => (b.pinned - a.pinned) || (b.updated - a.updated));
+    list.sort((a, b) => (!!b.pinTop - !!a.pinTop) || (!!b.pinned - !!a.pinned) || (b.updated - a.updated));   // Pinned, Favorites, then the rest
     return list;
   }
 
@@ -100,7 +102,7 @@
 
   function renderSidebar() {
     const alive = state.notes.filter((n) => !n.deleted);
-    const live = alive.filter((n) => !n.trashed);
+    const live = alive.filter((n) => !n.trashed && !n.archived);
     const folders = state.folders.filter((f) => !f.deleted);
     const is = (t, id) => view.type === t && view.id === id ? ' active' : '';
     const navItem = (type, id, label, count, extra = '', ic = '') =>
@@ -116,7 +118,8 @@
       navItem('events', undefined, 'Events', pc.events || '', '', 'events') +
       '<div class="nav-sep"></div>' +
       navItem('pinned', undefined, 'Favorites', live.filter((n) => n.pinned).length, '', 'star') +
-      navItem('trash', undefined, 'Trash', alive.length - live.length, '', 'trash');
+      navItem('archive', undefined, 'Archive', alive.filter((n) => !n.trashed && n.archived).length, '', 'archive') +
+      navItem('trash', undefined, 'Trash', alive.filter((n) => n.trashed).length, '', 'trash');
     $('#navFolders').innerHTML = folders.map((f) =>
       navItem('folder', f.id, f.name, live.filter((n) => n.folder === f.id).length, '<button class="del" data-del-folder title="Delete folder">✕</button>')).join('');
     const tagCount = {};
@@ -134,33 +137,42 @@
     bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
     star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
     trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+    archive: '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>',
   };
+  const PIN_SVG = '<svg class="pin-ic" viewBox="0 0 24 24" aria-label="Pinned"><path d="M9 4h6l-1 6 3 3H7l3-3zM12 13v7"/></svg>';
+  const MORE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5.5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18.5" r="1.6"/></svg>';
 
   function viewTitle() {
     if (view.type === 'all') return 'All Notes';
     if (view.type === 'pinned') return 'Favorites';
     if (view.type === 'trash') return 'Trash';
+    if (view.type === 'archive') return 'Archive';
     if (view.type === 'tag') return '#' + view.id;
     const f = state.folders.find((x) => x.id === view.id);
     return f ? f.name : 'Folder';
   }
 
+  let renaming = null;                                   // { id, input } while a note's name is being edited in the list
   function renderList() {
+    if (renaming) { renaming.stale = true; return; }     // don't wipe out a name mid-typing; redrawn when it's done
     $('#listTitle').textContent = viewTitle();
     const list = visibleNotes();
     if (!list.length) {
-      $('#notes').innerHTML = `<div class="no-notes">${query ? 'No matching notes' : view.type === 'trash' ? 'Trash is empty' : 'No notes yet'}</div>`;
+      $('#notes').innerHTML = `<div class="no-notes">${query ? 'No matching notes' : view.type === 'trash' ? 'Trash is empty' : view.type === 'archive' ? 'No archived notes' : 'No notes yet'}</div>`;
       return;
     }
-    let html = '', lastPinned = null;
+    const group = (n) => (view.type === 'trash' ? '' : n.pinTop ? 'Pinned' : n.pinned ? 'Favorites' : 'Notes');
+    const labelled = new Set(list.map(group)).size > 1;
+    let html = '', last = null;
     for (const n of list) {
-      if (view.type !== 'trash' && n.pinned !== lastPinned && n.pinned) html += '<div class="group-label">Favorites</div>';
-      if (view.type !== 'trash' && lastPinned === true && !n.pinned) html += '<div class="group-label">Notes</div>';
-      lastPinned = n.pinned;
+      const g = group(n);
+      if (labelled && g !== last) html += `<div class="group-label">${g}</div>`;
+      last = g;
       const i = info(n);
       html += `<div class="note${n.id === currentId ? ' active' : ''}" data-id="${n.id}" tabindex="0">
-        <div class="t">${esc(i.title)}</div>
-        <div class="m"><span class="d">${fmtDate(n.updated)}</span><span class="p">${esc(i.preview) || 'No additional text'}</span></div></div>`;
+        <div class="t">${n.pinTop ? PIN_SVG : ''}<span class="tt">${esc(i.title)}</span></div>
+        <div class="m"><span class="d">${fmtDate(n.updated)}</span><span class="p">${esc(i.preview) || 'No additional text'}</span></div>
+        <button class="note-more" type="button" aria-label="More actions for ${esc(i.title)}" title="More">${MORE_SVG}</button></div>`;
     }
     $('#notes').innerHTML = html;
   }
@@ -204,7 +216,7 @@
     ['tasks', 'Tasks', '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12l2.5 2.5 4.5-5"/>'],
     ['reminders', 'Reminders', '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 21h4"/>']];
   function renderTabbar() {
-    const cur = ['folder', 'tag', 'pinned', 'trash'].includes(view.type) ? 'all' : view.type;
+    const cur = ['folder', 'tag', 'pinned', 'trash', 'archive'].includes(view.type) ? 'all' : view.type;
     $('#tabbar').innerHTML = TABS.map(([t, label, icon]) => `<button data-tab="${t}" class="${t === cur ? 'on' : ''}"${t === cur ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><span>${label}</span></button>`).join('');
   }
   function setView(type, id) {
@@ -241,7 +253,7 @@
   function newNote() {
     const now = Date.now();
     const n = { id: uid(), folder: view.type === 'folder' ? view.id : null, pinned: false, trashed: false, created: now, updated: now, html: '' };
-    if (view.type === 'trash' || view.type === 'pinned' || Planner.isView(view.type)) { view = { type: 'all' }; showPlanner(false); }
+    if (['trash', 'pinned', 'archive'].includes(view.type) || Planner.isView(view.type)) { view = { type: 'all' }; showPlanner(false); }
     query = ''; $('#search').value = '';
     state.notes.unshift(n);
     persist(); renderAll(); openNote(n.id);
@@ -476,8 +488,28 @@
   }
 
   // ---------- Events ----------
+  let tap = null;                                        // phones: the first tap of a possible double-tap
   $('#notes').addEventListener('click', (e) => {
-    const el = e.target.closest('.note'); if (el) openNote(el.dataset.id);
+    const el = e.target.closest('.note'); if (!el || e.target.closest('.rename-input')) return;
+    const more = e.target.closest('.note-more');
+    if (more) {                                          // ⋮: the same menu as right-click, under the button
+      e.stopPropagation();
+      if (ctx && ctx.id === el.dataset.id) { closeMenu(); return; }
+      const r = more.getBoundingClientRect();
+      openNoteMenu(el.dataset.id, r.right - 230, r.bottom + 4);
+      return;
+    }
+    if (innerWidth <= 900) {                             // a short wait so a double-tap renames instead of opening
+      if (tap && tap.id === el.dataset.id) { clearTimeout(tap.t); tap = null; startRename(el.dataset.id); return; }
+      if (tap) clearTimeout(tap.t);
+      tap = { id: el.dataset.id, t: setTimeout(() => { tap = null; openNote(el.dataset.id); }, 260) };
+      return;
+    }
+    openNote(el.dataset.id);
+  });
+  $('#notes').addEventListener('dblclick', (e) => {
+    const el = e.target.closest('.note');
+    if (el && innerWidth > 900 && !e.target.closest('.note-more, .rename-input')) startRename(el.dataset.id);
   });
 
   // ---------- Right-click menu for notes ----------
@@ -499,6 +531,69 @@
     if (id === currentId) renderActions();
     const f = state.folders.find((x) => x.id === folder);
     Planner.toast(f ? `Moved to ${f.name}` : 'Removed from folder');
+  }
+  // Rename: a note's name is its first line, so renaming rewrites that line (keeping its heading style).
+  function setTitle(n, title) {
+    tmp.innerHTML = n.html || '';
+    const walker = document.createTreeWalker(tmp, NodeFilter.SHOW_TEXT, { acceptNode: (t) => (t.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP) });
+    const first = walker.nextNode();
+    if (!first) { n.html = `<h1>${esc(title)}</h1><div><br></div>` + (n.html || ''); return; }
+    const block = first.parentElement.closest('h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, td, th, div') || tmp;
+    const host = tmp.contains(block) ? block : tmp;
+    // the first line ends at the first <br> or block inside it
+    const nodes = [];
+    for (const c of host.childNodes) { if (c.nodeName === 'BR' || /^(DIV|P|UL|OL|H\d|BLOCKQUOTE|PRE|TABLE|FIGURE)$/.test(c.nodeName)) break; nodes.push(c); }
+    const at = nodes.length ? nodes[0] : host.firstChild;
+    host.insertBefore(document.createTextNode(title), at);
+    nodes.forEach((c) => c.remove());
+    n.html = tmp.innerHTML;
+  }
+  function renameNote(id, title) {
+    const n = byId(id); title = title.trim();
+    if (!n || !title || title === info(n).title) return;
+    setTitle(n, title); touch(n); persist();
+    if (id === currentId) openNote(id); else renderAll();
+    Planner.toast('Renamed');
+  }
+  function startRename(id) {
+    const n = byId(id); if (!n || n.trashed) return;
+    closeMenu();
+    if (renaming) finishRename(true);
+    const row = document.querySelector(`.note[data-id="${id}"]`); if (!row) return;
+    const t = row.querySelector('.t');
+    const input = document.createElement('input');
+    input.className = 'rename-input'; input.value = info(n).title === 'New note' && !info(n).text ? '' : info(n).title;
+    input.placeholder = 'Note name'; input.setAttribute('aria-label', 'Note name');
+    t.replaceChildren(input);
+    renaming = { id, input, stale: false };
+    input.focus(); input.select();
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { e.preventDefault(); finishRename(true); }
+      if (e.key === 'Escape') { e.preventDefault(); finishRename(false); }
+    });
+    input.addEventListener('blur', () => finishRename(true));
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('dblclick', (e) => e.stopPropagation());
+  }
+  function finishRename(save) {
+    if (!renaming) return;
+    const { id, input } = renaming;
+    renaming = null;
+    if (save) renameNote(id, input.value);
+    renderList();
+  }
+  function togglePinTop(id) {
+    const n = byId(id); if (!n) return;
+    n.pinTop = !n.pinTop; touch(n); persist(); renderAll();
+    Planner.toast(n.pinTop ? 'Pinned to the top' : 'Unpinned');
+  }
+  function setArchived(id, flag) {
+    const n = byId(id); if (!n) return;
+    n.archived = flag; touch(n); persist();
+    if (id === currentId && flag !== (view.type === 'archive')) openNote(null);
+    renderAll();
+    Planner.toast(flag ? 'Archived: find it under Archive in the sidebar' : 'Moved back to Notes');
   }
   function togglePin(id) {
     const n = byId(id); if (!n) return;
@@ -536,6 +631,8 @@
     const folders = state.folders.filter((f) => !f.deleted);
     return [
       { label: 'Open', icon: '↗', run: () => openNote(n.id) },
+      { label: 'Rename', icon: '✎', run: () => startRename(n.id) },
+      { label: n.pinTop ? 'Unpin' : 'Pin to top', icon: PIN_SVG, run: () => togglePinTop(n.id) },
       { label: n.pinned ? 'Remove from Favorites' : 'Add to Favorites', icon: n.pinned ? '☆' : '★', run: () => togglePin(n.id) },
       { label: 'Duplicate', icon: '⧉', run: () => duplicateNote(n.id) },
       { label: 'Move to folder', icon: '▤', sub: [{ label: 'No folder', icon: n.folder ? '' : '✓', run: () => moveNote(n.id, null) }]
@@ -546,10 +643,12 @@
       { label: 'Copy text', icon: '⎘', run: () => copyNoteText(n.id) },
       { label: 'Export', icon: '⤓', sub: exportItems(n.id) },
       { sep: true },
+      { label: n.archived ? 'Unarchive' : 'Archive', icon: ICON_SVG('archive'), run: () => setArchived(n.id, !n.archived) },
       { label: 'Move to Trash', icon: '🗑', run: () => trash(n.id, true) },
       { label: 'Delete permanently…', icon: '✕', danger: true, run: () => deleteForever(n.id) },
     ];
   }
+  const ICON_SVG = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
   const menuHTML = (items) => items.map((it, i) => it.sep ? '<div class="ctx-sep" role="separator"></div>'
     : `<button class="ctx-item${it.danger ? ' danger' : ''}" data-i="${i}" role="menuitem"${it.sub ? ' aria-haspopup="true"' : ''}><span class="ctx-ic">${it.icon || ''}</span>${esc(it.label)}${it.sub ? '<span class="ctx-more">›</span>' : ''}</button>`).join('');
   function menuKeys(e, el, onLeft) {                 // arrow keys move between items; returns true if handled
@@ -658,10 +757,14 @@
   // keyboard: the context-menu key or Shift+F10 on a focused note
   $('#notes').addEventListener('keydown', (e) => {
     const el = e.target.closest('.note'); if (!el) return;
+    if (e.target.closest('.rename-input')) return;
+    if (e.key === 'F2') { e.preventDefault(); startRename(el.dataset.id); return; }
     if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); const r = el.getBoundingClientRect(); openNoteMenu(el.dataset.id, r.left + 24, r.bottom - 4); }
     else if (e.key === 'Enter') openNote(el.dataset.id);
   });
-  document.addEventListener('mousedown', (e) => { if (ctx && !ctx.el.contains(e.target) && !(ctx.sub && ctx.sub.el.contains(e.target))) closeMenu(); }, true);
+  document.addEventListener('mousedown', (e) => {
+    if (ctx && !ctx.el.contains(e.target) && !(ctx.sub && ctx.sub.el.contains(e.target)) && !e.target.closest('.note-more')) closeMenu();   // ⋮ toggles it itself
+  }, true);
   document.addEventListener('scroll', () => closeMenu(), true);
   $('#app').addEventListener('click', (e) => {
     if (e.target.closest('.sidebar')) {
@@ -1028,7 +1131,7 @@
     }
     await pool(need, 4, async ([nid, f, ru]) => {
       const j = await (await drive(`/drive/v3/files/${f.id}?alt=media`)).json();
-      const n = { id: nid, folder: j.folder || null, pinned: !!j.pinned, trashed: !!j.trashed, deleted: false, html: j.html || '', created: j.created || ru, updated: ru, sv: ru, fid: f.id };
+      const n = { id: nid, folder: j.folder || null, pinned: !!j.pinned, pinTop: !!j.pinTop, archived: !!j.archived, trashed: !!j.trashed, deleted: false, html: j.html || '', created: j.created || ru, updated: ru, sv: ru, fid: f.id };
       const l = byId(nid);
       if (l) Object.assign(l, n); else state.notes.push(n);
       changed.add(nid);
@@ -1088,7 +1191,7 @@
         }
         delete n.fid; n.sv = u; return;
       }
-      const content = { id: n.id, folder: n.folder || null, pinned: !!n.pinned, trashed: !!n.trashed, html: n.html || '', created: n.created || u, updated: u };
+      const content = { id: n.id, folder: n.folder || null, pinned: !!n.pinned, pinTop: !!n.pinTop, archived: !!n.archived, trashed: !!n.trashed, html: n.html || '', created: n.created || u, updated: u };
       const meta = { name: fileName(n), appProperties: { kind: 'note', nid: n.id, updated: String(u) } };
       if (n.fid) {
         try { await upload('PATCH', `/upload/drive/v3/files/${n.fid}?uploadType=multipart&fields=id`, meta, content); }
