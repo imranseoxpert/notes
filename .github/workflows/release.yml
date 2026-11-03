@@ -1,0 +1,25 @@
+# Builds the Mac and Windows apps when a version tag (v1.0.0, v1.1.0, ...) is pushed, and publishes them
+# as a GitHub Release. These public builds carry no Google credentials: people add their own in the app.
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mac app
+        run: PUBLIC=1 bash macapp/build.sh
+      - name: Windows app
+        run: PUBLIC=1 bash winapp/build.sh
+      - name: Web app
+        run: bash webapp/build.sh
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --title "Notes $GITHUB_REF_NAME" --generate-notes \
+            macapp/build/Notes.dmg winapp/build/Notes-Windows-x64.zip webapp/build/Notes-iPhone-Web.zip

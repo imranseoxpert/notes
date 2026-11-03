@@ -1,0 +1,10 @@
+# Build output (rebuilt by the scripts and by GitHub Actions)
+macapp/build/
+winapp/build/
+webapp/build/
+
+# Your own Google sign-in credentials: never commit these
+config.local.js
+
+.DS_Store
+.claude/

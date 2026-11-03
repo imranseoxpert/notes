@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e5a400">
+<meta name="description" content="Fast, private notes that sync across your devices.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Notes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Notes</title>
+<script>
+// Appearance: 'system' (default), 'light' or 'dark'. Resolved before the first paint so the page never flashes.
+try { var t = localStorage.getItem('notes-theme'); document.documentElement.dataset.theme = t === 'light' || t === 'dark' ? t : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) {}
+</script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar">
+    <button class="launch-btn" id="launchBtn" title="Search or create (⌘K / Ctrl+K)"><span>⌕</span> Search or create… <kbd>⌘K</kbd></button>
+    <div class="side-section" id="navMain"></div>
+    <div class="side-head">
+      <span>Folders</span>
+      <button class="icon-btn" id="addFolder" title="New folder">+</button>
+    </div>
+    <div class="side-section" id="navFolders"></div>
+    <div class="side-head"><span>Tags</span></div>
+    <div class="side-section" id="navTags"></div>
+    <div class="account" id="account" hidden>
+      <div class="acct-line" id="acctLine"></div>
+      <button class="link-btn" id="acctBtn">Sign in to sync</button>
+      <button class="link-btn" id="signOutBtn" hidden>Sign out</button>
+    </div>
+    <div class="side-foot">
+      <button class="link-btn" id="exportAll">Backup</button>
+      <label class="link-btn">Restore<input type="file" id="importFile" accept="application/json" hidden></label>
+      <label class="link-btn" title="Import Markdown or text files (Obsidian, Joplin, Bear…)">Import .md<input type="file" id="importMd" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple hidden></label>
+    </div>
+    <div class="theme-seg" id="themeSeg" role="radiogroup" aria-label="Appearance"></div>
+  </aside>
+
+  <section class="list-pane" id="listPane">
+    <div class="list-head">
+      <button class="icon-btn menu-btn" id="menuBtn" title="Sidebar">☰</button>
+      <input type="search" id="search" placeholder="Search notes">
+      <button class="icon-btn" id="dailyBtn" title="Today’s daily note">📅</button>
+      <button class="icon-btn" id="newNote" title="New note (Ctrl/Cmd+Alt+N)" aria-label="New note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 4H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-4.5"/><path d="M18.1 3.4a2 2 0 0 1 2.8 2.8l-8.3 8.3-3.6.9.9-3.6z"/></svg></button>
+    </div>
+    <div class="list-title" id="listTitle"></div>
+    <div class="notes" id="notes"></div>
+  </section>
+
+  <main class="editor-pane" id="editorPane">
+    <div class="empty" id="emptyState">
+      <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 4H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-4.5"/><path d="M18.1 3.4a2 2 0 0 1 2.8 2.8l-8.3 8.3-3.6.9.9-3.6z"/></svg></div>
+      <p>No note selected</p>
+      <button class="btn" id="emptyNew">New note</button>
+    </div>
+    <div class="editor-wrap" id="editorWrap" hidden>
+      <div class="topbar">
+        <button class="icon-btn back-btn" id="backBtn" title="Back">‹</button>
+        <div class="toolbar" id="toolbar">
+          <button data-cmd="insert" title="Insert a block (or type / in the note)" class="tb-insert">＋</button>
+          <span class="sep"></span>
+          <button data-cmd="h1" title="Heading 1">H1</button>
+          <button data-cmd="h2" title="Heading 2">H2</button>
+          <button data-cmd="h3" title="Heading 3">H3</button>
+          <span class="sep"></span>
+          <button data-cmd="bold" title="Bold (Ctrl/Cmd+B)"><b>B</b></button>
+          <button data-cmd="italic" title="Italic (Ctrl/Cmd+I)"><i>I</i></button>
+          <button data-cmd="underline" title="Underline (Ctrl/Cmd+U)"><u>U</u></button>
+          <button data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+          <button data-cmd="highlight" title="Highlight">▮</button>
+          <span class="sep"></span>
+          <button data-cmd="ul" title="Bulleted list">•≡</button>
+          <button data-cmd="ol" title="Numbered list">1≡</button>
+          <button data-cmd="check" title="Checklist">☑</button>
+          <button data-cmd="quote" title="Quote">❝</button>
+          <button data-cmd="code" title="Code block">&lt;/&gt;</button>
+          <button data-cmd="link" title="Link (Ctrl/Cmd+K)">🔗</button>
+          <button data-cmd="hr" title="Divider">―</button>
+          <button data-cmd="image" title="Add images (or paste / drop them into the note)" class="tb-image" aria-label="Add images"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg></button>
+          <button data-cmd="media" title="Media: photo or video, audio recording, file, camera, document scan, sketch" class="tb-image" aria-label="Media" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.5l-8.1 8.1a5 5 0 0 1-7.1-7.1l8.5-8.5a3.4 3.4 0 0 1 4.8 4.8l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/></svg></button>
+        </div>
+        <div class="actions">
+          <select id="folderSelect" title="Move to folder"></select>
+          <button class="icon-btn" id="pinBtn" title="Pin">☆</button>
+          <button class="icon-btn" id="shareBtn" title="Share" aria-label="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg></button>
+          <button class="icon-btn" id="exportBtn" title="Export as PDF, Word, Markdown…" aria-label="Export">⤓</button>
+          <button class="icon-btn" id="trashBtn" title="Move to trash">🗑</button>
+          <button class="icon-btn" id="restoreBtn" title="Restore" hidden>↩</button>
+          <button class="icon-btn danger" id="deleteBtn" title="Delete forever" hidden>✕</button>
+        </div>
+      </div>
+      <div class="scroller">
+        <div id="editor" class="editor" contenteditable="true" spellcheck="true" data-placeholder="Start writing… type / for blocks, [[ to link a note"></div>
+        <div class="backlinks" id="backlinks" hidden></div>
+      </div>
+      <div class="statusbar" id="statusbar"></div>
+    </div>
+  </main>
+
+  <section class="planner" id="planner" hidden></section>
+  <aside class="inbox" id="inbox" hidden aria-label="Inbox"></aside>
+</div>
+<nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
+<div class="auth" id="auth" hidden>
+  <div class="auth-card">
+    <div class="auth-icon">✎</div>
+    <h2>Sync your notes</h2>
+    <p>Notes are saved in a “Notes” folder in your Google Drive, so every device stays in step.</p>
+    <button class="btn google" id="googleBtn" type="button">Continue with Google</button>
+    <div class="or"><span>or</span></div>
+    <form id="authForm">
+      <input type="email" id="authEmail" placeholder="Your Google email" autocomplete="email" required>
+      <button class="btn ghost" type="submit" id="emailBtn">Continue with email</button>
+    </form>
+    <div class="auth-err" id="authErr" role="alert"></div>
+    <button class="link-btn" type="button" id="skipAuth">Use without sync</button>
+  </div>
+</div>
+<script src="config.js"></script>
+<script src="planner.js"></script>
+<script src="blocks.js"></script>
+<script src="export.js"></script>
+<script src="media.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
