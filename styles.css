@@ -671,7 +671,3 @@ html, body { overflow: hidden; }
   border: 1px solid var(--accent); border-radius: 6px; padding: 2px 6px; outline: none; }
 @media (max-width: 900px) { .rename-input { font-size: 16px; } }
 .ctx-ic .pin-ic { width: 15px; height: 15px; stroke: currentColor; }
-
-/* Sketch: a labelled toolbar button, and a "New sketch" button beside "New note" */
-.toolbar button.tb-label { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; font-size: 13px; color: var(--text); }
-.toolbar .tb-label span { font-weight: 500; }
