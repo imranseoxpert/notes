@@ -202,8 +202,6 @@
     $('#lockBtn').title = lockLabel; $('#lockBtn').setAttribute('aria-label', lockLabel);
     $('#lockBtn').hidden = n.trashed;
     $('#lockBtn').classList.toggle('on', !!n.locked);
-    $('#folderSelect').innerHTML = '<option value="">No folder</option>' +
-      state.folders.filter((f) => !f.deleted).map((f) => `<option value="${f.id}"${n.folder === f.id ? ' selected' : ''}>${esc(f.name)}</option>`).join('');
     $('#editor').contentEditable = n.trashed ? 'false' : 'true';
   }
 
@@ -1104,7 +1102,6 @@
     const a = document.createElement('a');
     a.href = /^www\./i.test(url) ? 'https://' + url : url;
     a.textContent = url;
-    a.title = (navigator.platform.startsWith('Mac') ? '⌘' : 'Ctrl') + '-click to open';
     r.deleteContents(); r.insertNode(a);
     // the caret goes back to where it was: after the link and any punctuation that followed it
     const rest = a.nextSibling && a.nextSibling.nodeType === 3 ? a.nextSibling : null;
@@ -1147,8 +1144,9 @@
     if (Blocks.onClick(e)) return;
     const li = e.target.closest && e.target.closest('ul.checklist li');
     if (li && e.offsetX < 26 && e.target === li) { li.classList.toggle('done'); onEdit(); return; }
-    const a = e.target.closest && e.target.closest('a');
-    if (a && (e.metaKey || e.ctrlKey)) window.open(a.href, '_blank', 'noopener');
+    const a = e.target.closest && e.target.closest('a[href]');
+    // a click opens a link, unless you were dragging to select its text; arrow keys still reach it to edit
+    if (a && /^(https?|mailto|tel):/i.test(a.href) && getSelection().isCollapsed) { e.preventDefault(); window.open(a.href, '_blank', 'noopener'); }
   });
   document.addEventListener('selectionchange', () => { if (document.activeElement === editor) updateToolbar(); });
   editor.addEventListener('paste', (e) => {
@@ -1171,7 +1169,6 @@
   $('#trashBtn').onclick = () => trash(currentId, true);
   $('#restoreBtn').onclick = () => trash(currentId, false);
   $('#deleteBtn').onclick = () => deleteForever(currentId);
-  $('#folderSelect').onchange = (e) => { const n = byId(currentId); n.folder = e.target.value || null; touch(n); persist(); renderAll(); };
   $('#shareBtn').onclick = () => { if (currentId) Media.share(currentId); };
   $('#exportBtn').onclick = (e) => {                     // the ⤓ button: same Export list as the right-click menu
     if (!currentId) return;
@@ -1717,10 +1714,17 @@
       } while (again);
       if (needsReauth) { needsReauth = false; renderAccount(); }
       setSyncLabel('synced');
+      $('#acctLine').removeAttribute('title');
     } catch (err) {
       console.error('sync failed', err, err.detail || '');
       if (err instanceof NeedAuth) { needsReauth = true; renderAccount(); setSyncLabel('sign-in expired'); }
-      else setSyncLabel(navigator.onLine ? 'sync error' : 'offline');
+      else {
+        // say why, so the problem can be identified: e.g. "sync error (403)", with Google's explanation on hover
+        let why = err.message || String(err);
+        try { why = JSON.parse(err.detail).error.message || why; } catch {}
+        setSyncLabel(navigator.onLine ? `sync error${err.status ? ` (${err.status})` : ''}` : 'offline');
+        $('#acctLine').title = navigator.onLine ? why : '';
+      }
     } finally { syncing = false; }
   }
 

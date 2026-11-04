@@ -1,6 +1,6 @@
 // Offline shell: network-first so updates arrive, cache fallback so the app opens without a connection.
 // Bump VERSION to force old caches out.
-const VERSION = 'notes-v23';
+const VERSION = 'notes-v24';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'planner.js', 'blocks.js', 'export.js', 'media.js', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {

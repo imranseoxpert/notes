@@ -583,6 +583,7 @@
   function hydrate(root = ed) {
     if (!root) return;
     root.querySelectorAll('figure.att').forEach((f) => { if (f.dataset.state !== 'ready' && f.dataset.state !== 'loading') renderAtt(f); });
+    root.querySelectorAll('a[title$="-click to open"]').forEach((a) => a.removeAttribute('title'));   // older links: a plain click opens them now
     root.querySelectorAll('a.nlink').forEach(renderLink);
     root.querySelectorAll('.blk-doc').forEach(renderDoc);
     root.querySelectorAll('.blk-toc').forEach(renderToc);
