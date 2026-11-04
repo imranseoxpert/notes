@@ -47,7 +47,11 @@ jobs:
             webapp/build/Notes-iPhone-Web.zip
 
   mac:
-    runs-on: macos-15-intel
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15-intel, macos-latest]    # either can sit unassigned for a long time: one success is enough
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -81,5 +85,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if ! find out -type f -name 'Notes.dmg' | grep -q .; then echo "No Mac build succeeded, so nothing was published."; exit 1; fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo "$TAG is already published."; exit 0; fi
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "Notes $TAG" --generate-notes \
             $(find out -type f \( -name 'Notes.dmg' -o -name 'Notes-Setup-x64.exe' -o -name 'Notes-Windows-x64.zip' -o -name 'Notes-iPhone-Web.zip' \))
