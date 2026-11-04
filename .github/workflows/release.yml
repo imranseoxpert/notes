@@ -64,11 +64,12 @@ jobs:
         run: bash macapp/build.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: mac
+          name: mac-${{ matrix.runner }}
           path: macapp/build/Notes.dmg
 
   publish:
     needs: [windows-and-web, mac]
+    if: ${{ always() && needs.windows-and-web.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -79,5 +80,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if ! find out -type f -name 'Notes.dmg' | grep -q .; then echo "No Mac build succeeded, so nothing was published."; exit 1; fi
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "Notes $TAG" --generate-notes \
             $(find out -type f \( -name 'Notes.dmg' -o -name 'Notes-Setup-x64.exe' -o -name 'Notes-Windows-x64.zip' -o -name 'Notes-iPhone-Web.zip' \))
