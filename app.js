@@ -44,14 +44,16 @@
   function load() {
     try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; }
   }
+  // A locked note's readable text only ever lives in memory while it's open: disk, backups and Drive get `enc`.
+  function sealedOnly(k, v) { return k === 'html' && this.locked ? '' : v; }
   function persist(noSync) {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { setStatus('Could not save: ' + e.message); }
+    try { localStorage.setItem(KEY, JSON.stringify(state, sealedOnly)); } catch (e) { setStatus('Could not save: ' + e.message); }
     if (!noSync) scheduleSync();
     if (window.Planner && plannerReady) Planner.dataChanged();
   }
   let plannerReady = false;
   const touch = (n) => { n.updated = Date.now(); };
-  const looksEmpty = (n) => !info(n).text && !/<(figure|table|hr|img)\b|blk-/.test(n.html);
+  const looksEmpty = (n) => !textLines(n.html).length && !/<(figure|table|hr|img)\b|blk-/.test(n.html);
   const byId = (id) => state.notes.find((n) => n.id === id);
 
   // ---------- Derived note info ----------
@@ -61,6 +63,7 @@
     return tmp.textContent.replace(/ /g, ' ').split('\n').map((s) => s.trim()).filter(Boolean);
   }
   function info(n) {
+    if (n.locked) return { title: n.lockTitle || 'Locked note', preview: '', tags: [], words: 0, text: '' };   // never its contents, even while open
     if (n._info && n._info.src === n.html) return n._info;
     const lines = textLines(n.html);
     const text = lines.join(' ');
@@ -73,6 +76,7 @@
   }
 
   // ---------- Filtering ----------
+  const imageText = (n) => (n.locked ? '' : Blocks.imageText(n.html));
   function visibleNotes() {
     const q = query.trim().toLowerCase();
     let list = state.notes.filter((n) => {
@@ -84,7 +88,7 @@
       if (view.type === 'pinned' && !n.pinned) return false;
       if (view.type === 'folder' && n.folder !== view.id) return false;
       if (view.type === 'tag' && !info(n).tags.includes(view.id)) return false;
-      if (q) { const i = info(n); if (!(i.title + ' ' + i.text).toLowerCase().includes(q)) return false; }
+      if (q) { const i = info(n); if (!(i.title + ' ' + i.text).toLowerCase().includes(q) && !imageText(n).toLowerCase().includes(q)) return false; }
       return true;
     });
     list.sort((a, b) => (!!b.pinTop - !!a.pinTop) || (!!b.pinned - !!a.pinned) || (b.updated - a.updated));   // Pinned, Favorites, then the rest
@@ -152,6 +156,14 @@
     return f ? f.name : 'Folder';
   }
 
+  const LOCK_MARK = '<svg class="pin-ic" viewBox="0 0 24 24" aria-label="Locked"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  // When a search matched only text inside a picture, say so and show that text instead of the usual preview.
+  function foundInImage(n, i) {
+    const q = query.trim().toLowerCase();
+    if (!q || (i.title + ' ' + i.text).toLowerCase().includes(q)) return '';
+    const text = imageText(n), at = text.toLowerCase().indexOf(q);
+    return at < 0 ? '' : 'In image: …' + text.slice(Math.max(0, at - 20), at + q.length + 60) + '…';
+  }
   let renaming = null;                                   // { id, input } while a note's name is being edited in the list
   function renderList() {
     if (renaming) { renaming.stale = true; return; }     // don't wipe out a name mid-typing; redrawn when it's done
@@ -170,8 +182,8 @@
       last = g;
       const i = info(n);
       html += `<div class="note${n.id === currentId ? ' active' : ''}" data-id="${n.id}" tabindex="0">
-        <div class="t">${n.pinTop ? PIN_SVG : ''}<span class="tt">${esc(i.title)}</span></div>
-        <div class="m"><span class="d">${fmtDate(n.updated)}</span><span class="p">${esc(i.preview) || 'No additional text'}</span></div>
+        <div class="t">${n.locked ? LOCK_MARK : ''}${n.pinTop ? PIN_SVG : ''}<span class="tt">${esc(i.title)}</span></div>
+        <div class="m"><span class="d">${fmtDate(n.updated)}</span><span class="p">${n.locked ? 'Locked' : esc(foundInImage(n, i) || i.preview) || 'No additional text'}</span></div>
         <button class="note-more" type="button" aria-label="More actions for ${esc(i.title)}" title="More">${MORE_SVG}</button></div>`;
     }
     $('#notes').innerHTML = html;
@@ -186,6 +198,10 @@
     $('#restoreBtn').hidden = !n.trashed;
     $('#deleteBtn').hidden = !n.trashed;
     $('#pinBtn').hidden = n.trashed;
+    const lockLabel = n.locked ? 'Lock this note now' : 'Lock this note with a password';
+    $('#lockBtn').title = lockLabel; $('#lockBtn').setAttribute('aria-label', lockLabel);
+    $('#lockBtn').hidden = n.trashed;
+    $('#lockBtn').classList.toggle('on', !!n.locked);
     $('#folderSelect').innerHTML = '<option value="">No folder</option>' +
       state.folders.filter((f) => !f.deleted).map((f) => `<option value="${f.id}"${n.folder === f.id ? ' selected' : ''}>${esc(f.name)}</option>`).join('');
     $('#editor').contentEditable = n.trashed ? 'false' : 'true';
@@ -195,7 +211,8 @@
     const n = byId(currentId);
     if (!n) return;
     const i = info(n);
-    $('#statusbar').innerHTML = `<span>${i.words} word${i.words === 1 ? '' : 's'}</span><span>${extra || 'Edited ' + new Date(n.updated).toLocaleString()}</span>`;
+    const words = n.locked ? textLines(n.html).join(' ').split(/\s+/).filter(Boolean).length : i.words;
+    $('#statusbar').innerHTML = `<span>${words} word${words === 1 ? '' : 's'}</span><span>${extra || 'Edited ' + new Date(n.updated).toLocaleString()}</span>`;
   }
 
   function renderAll() { renderSidebar(); renderList(); if (window.Planner && plannerReady && Planner.isView(view.type)) Planner.render(); }
@@ -230,11 +247,22 @@
   }
 
   function openNote(id) {
+    if (unlocked && unlocked.id !== id) relock();        // leaving an unlocked note locks it again
     currentId = id;
     const n = byId(id);
+    const sealed = !!(n && n.locked && !isUnlocked(id));
     $('#emptyState').hidden = !!n;
-    $('#editorWrap').hidden = !n;
+    $('#editorWrap').hidden = !n || sealed;
+    $('#lockScreen').hidden = !sealed;
     $('#app').classList.toggle('editing', !!n);
+    if (sealed) {
+      $('#editor').innerHTML = '';
+      $('#lockName').textContent = info(n).title;
+      $('#lockPass').value = ''; $('#lockErr').textContent = '';
+      if (innerWidth > 900) $('#lockPass').focus();
+      renderList();
+      return;
+    }
     if (n) {
       const ed = $('#editor');
       ed.innerHTML = n.html;
@@ -262,16 +290,109 @@
 
   function onEdit() {
     const n = byId(currentId);
-    if (!n || n.trashed) return;
+    if (!n || n.trashed || (n.locked && !isUnlocked(n.id))) return;
     const ed = $('#editor');
+    tidyFormatting(ed);
     n.html = Blocks.serialize(ed);            // without file previews / boards drawn at runtime
     n.updated = Date.now();
+    if (n.locked) unlocked.dirty = true;
     ed.classList.toggle('is-empty', looksEmpty(n));
     Blocks.afterEdit();
     renderList(); setStatus('Saving…');
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { persist(); renderSidebar(); setStatus(); }, 400);
+    saveTimer = setTimeout(async () => {
+      const cur = byId(currentId);
+      if (cur && cur.locked && isUnlocked(cur.id) && unlocked.dirty) { const u = unlocked; u.dirty = false; await seal(cur, cur.html, u); }
+      persist(); renderSidebar(); setStatus();
+    }, 400);
   }
+
+  // ---------- Password-locked notes ----------
+  // AES-GCM with a key made from the password (PBKDF2). The text is encrypted on this device before it's saved or
+  // synced; the password itself is never stored, so a forgotten password can't be recovered by anyone.
+  const LOCK_ITERATIONS = 600000, LOCK_AFTER = 5 * 60000;
+  let unlocked = null;                                   // { id, key, salt, it, dirty }: the one note open right now
+  let sealing = Promise.resolve();
+  const isUnlocked = (id) => !!unlocked && unlocked.id === id;
+  const bytesToB64 = (bytes) => { let s = ''; for (let i = 0; i < bytes.length; i += 32768) s += String.fromCharCode(...bytes.subarray(i, i + 32768)); return btoa(s); };
+  const b64ToBytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  async function lockKey(password, salt, it) {
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: it }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+  const openSealed = async (enc, key) => new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(enc.iv) }, key, b64ToBytes(enc.ct)));
+  function seal(n, html, u) {                            // encrypts in order, so an older save can't land after a newer one
+    sealing = sealing.then(async () => {
+      if (n.deleted) return;
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, u.key, new TextEncoder().encode(html)));
+      n.enc = { v: 1, salt: bytesToB64(u.salt), it: u.it, iv: bytesToB64(iv), ct: bytesToB64(ct) };
+      n.lockTitle = textLines(html)[0] || 'Locked note';
+      n.updated = Date.now();                            // so sync uploads this version, even if it just uploaded an older one
+    });
+    return sealing;
+  }
+  function relock() {
+    if (!unlocked) return;
+    const u = unlocked, n = byId(u.id);
+    unlocked = null;
+    if (!n) return;
+    clearTimeout(saveTimer);
+    const html = n.html;
+    n.html = '';                                         // gone from memory straight away
+    if (u.id === currentId) $('#editor').innerHTML = '';
+    if (u.dirty) seal(n, html, u).then(() => { persist(); renderList(); });
+    else persist(true);
+  }
+  async function lockNote(id, password) {
+    const n = byId(id); if (!n) return;
+    if (id === currentId) n.html = Blocks.serialize($('#editor'));
+    clearTimeout(saveTimer);
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const u = { id, salt, it: LOCK_ITERATIONS, key: await lockKey(password, salt, LOCK_ITERATIONS) };
+    const html = n.html;
+    await seal(n, html, u);
+    if (await openSealed(n.enc, u.key) !== html) throw new Error('The encrypted copy could not be checked');   // before the readable text goes
+    n.locked = true; n.html = '';
+    persist();
+    if (id === currentId) openNote(id);
+    renderAll();
+    Planner.toast('Note locked');
+  }
+  function askLockPassword(id) {
+    const n = byId(id); if (!n) return;
+    if (!window.crypto || !crypto.subtle) { Planner.toast('Locking needs a secure (https) page.'); return; }
+    if (id === currentId) n.html = Blocks.serialize($('#editor'));
+    const hasFiles = /data-att=/.test(n.html);
+    const m = Media.modal('md-lock', Media.head('Lock this note') + `
+      <form class="lock-form" autocomplete="off">
+        <p class="lock-warn"><b>If you forget this password, this note can never be opened again.</b> It isn't stored anywhere, so no one can reset it, including us.</p>
+        <p class="lock-note">The note's first line stays visible as its title.${hasFiles ? ' <b>Photos, recordings and files in this note are hidden in the app but are not encrypted:</b> they stay readable in your Google Drive folder.' : ''}</p>
+        <input type="password" id="newLock" placeholder="Password" aria-label="Password" autocomplete="new-password">
+        <input type="password" id="newLock2" placeholder="Type the password again" aria-label="Type the password again" autocomplete="new-password">
+        <div class="auth-err" id="newLockErr" role="alert"></div>
+        <div class="md-foot"><span class="grow"></span><button class="pl-btn" type="button" data-x="close">Cancel</button><button class="pl-btn primary" type="submit">Lock note</button></div>
+      </form>`, { sticky: true });
+    const q = (s) => m.el.querySelector(s);
+    q('#newLock').focus();
+    q('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const a = q('#newLock').value, b = q('#newLock2').value, err = q('#newLockErr');
+      if (a.length < 4) { err.textContent = 'Use at least 4 characters.'; return; }
+      if (a !== b) { err.textContent = 'The two passwords don\u2019t match.'; return; }
+      const go = q('[type=submit]'); go.disabled = true; go.textContent = 'Locking…';
+      try { await lockNote(id, a); m.close(); }
+      catch (ex) { go.disabled = false; go.textContent = 'Lock note'; err.textContent = `Couldn\u2019t lock it, so nothing changed: ${ex.message || ex}`; }
+    });
+  }
+  function removeLock(id) {
+    const n = byId(id); if (!n || !isUnlocked(id)) return;
+    unlocked = null;
+    n.locked = false; delete n.enc; delete n.lockTitle; touch(n);
+    persist(); openNote(id); renderAll();
+    Planner.toast('Lock removed');
+  }
+  function lockNow(id) { relock(); if (currentId === id) openNote(id); renderAll(); }
 
   function trash(id, flag) {
     const n = byId(id); if (!n) return;
@@ -330,6 +451,7 @@
       case 'attach': Blocks.pick(''); return;
       case 'media': Media.openMenu($('#toolbar [data-cmd="media"]')); return;
       case 'sketch': Media.addSketch(); return;
+      case 'format': toggleFormat($('#toolbar [data-cmd="format"]')); return;
       case 'quote': block('blockquote'); break;
       case 'code': block('pre'); break;
       case 'ul': document.execCommand('insertUnorderedList'); break;
@@ -351,6 +473,62 @@
     }
     onEdit(); updateToolbar();
   }
+  // ---------- Text colour, font and size ----------
+  // The browser's own commands, written as <font> tags: they split and merge across a selection correctly, and also
+  // work at the cursor for what you type next. Colours read well on both the light and dark themes.
+  const FMT_COLORS = [['Red', '#e5484d'], ['Orange', '#e8890c'], ['Amber', '#c98a00'], ['Green', '#30a46c'], ['Teal', '#12a594'], ['Blue', '#3b82f6'], ['Purple', '#8e4ec6'], ['Pink', '#d6409f'], ['Grey', '#8b8d98']];
+  const FMT_FONTS = [['Default', ''], ['Serif', 'Georgia, serif'], ['Mono', 'Menlo, Consolas, monospace'], ['Hand', 'Bradley Hand, Segoe Script, cursive']];
+  const FMT_SIZES = [['Small', '2'], ['Normal', '3'], ['Large', '5'], ['Huge', '6']];
+  const CLEAR_COLOR = '#010203', CLEAR_FACE = 'notes-default';   // stand-ins that mean "back to normal"; removed by tidyFormatting
+  function tidyFormatting(root) {
+    const fonts = root.querySelectorAll('font');
+    if (!fonts.length) return;
+    const sel = getSelection(), a = sel.anchorNode, ao = sel.anchorOffset, f = sel.focusNode, fo = sel.focusOffset;
+    let moved = false;
+    fonts.forEach((el) => {
+      if (/^(#010203|rgb\(1, 2, 3\))$/i.test(el.getAttribute('color') || '')) el.removeAttribute('color');
+      if (el.getAttribute('face') === CLEAR_FACE) el.removeAttribute('face');
+      if (el.getAttribute('size') === '3') el.removeAttribute('size');
+      if (!el.attributes.length) { el.replaceWith(...el.childNodes); moved = true; }
+    });
+    if (moved && a && f && root.contains(a) && root.contains(f)) sel.setBaseAndExtent(a, ao, f, fo);
+  }
+  let fmtPop = null;
+  function closeFormat() { if (fmtPop) { fmtPop.el.remove(); fmtPop = null; } }
+  function toggleFormat(btn) {
+    if (fmtPop) return closeFormat();
+    const sel = getSelection();
+    const saved = sel.rangeCount && $('#editor').contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+    const el = document.createElement('div');
+    el.className = 'fmt-pop'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Text colour, font and size');
+    el.innerHTML = `
+      <div class="fmt-label">Colour</div>
+      <div class="fmt-row"><button data-k="color" data-v="" class="fmt-swatch clear" title="Default colour" aria-label="Default colour"></button>${FMT_COLORS.map(([n, c]) => `<button data-k="color" data-v="${c}" class="fmt-swatch" style="background:${c}" title="${n}" aria-label="${n}"></button>`).join('')}</div>
+      <div class="fmt-label">Font</div>
+      <div class="fmt-row">${FMT_FONTS.map(([n, f]) => `<button data-k="font" data-v="${f}" style="font-family:${f || 'inherit'}">${n}</button>`).join('')}</div>
+      <div class="fmt-label">Size</div>
+      <div class="fmt-row">${FMT_SIZES.map(([n, s]) => `<button data-k="size" data-v="${s}">${n}</button>`).join('')}</div>`;
+    document.body.appendChild(el);
+    const r = btn.getBoundingClientRect(), w = el.getBoundingClientRect().width;
+    el.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+    el.style.top = r.bottom + 4 + 'px';
+    el.addEventListener('mousedown', (e) => e.preventDefault());           // keeps your text selected
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-k]'); if (!b) return;
+      const ed = $('#editor');
+      ed.focus();
+      if (!ed.contains(getSelection().anchorNode) && saved) { getSelection().removeAllRanges(); getSelection().addRange(saved); }
+      document.execCommand('styleWithCSS', false, false);
+      if (b.dataset.k === 'color') document.execCommand('foreColor', false, b.dataset.v || CLEAR_COLOR);
+      if (b.dataset.k === 'font') document.execCommand('fontName', false, b.dataset.v || CLEAR_FACE);
+      if (b.dataset.k === 'size') document.execCommand('fontSize', false, b.dataset.v);
+      onEdit();
+    });
+    fmtPop = { el, btn };
+  }
+  document.addEventListener('mousedown', (e) => { if (fmtPop && !fmtPop.el.contains(e.target) && !fmtPop.btn.contains(e.target)) closeFormat(); }, true);
+  document.addEventListener('keydown', (e) => { if (fmtPop && e.key === 'Escape') { closeFormat(); } }, true);
+
   // Wrap the selected text in <mark> (or unwrap if it is all highlighted already). execCommand's hiliteColor
   // can't take our theme colour, so this works on the DOM directly and handles multi-paragraph selections.
   function toggleHighlight() {
@@ -552,12 +730,13 @@
   function renameNote(id, title) {
     const n = byId(id); title = title.trim();
     if (!n || !title || title === info(n).title) return;
-    setTitle(n, title); touch(n); persist();
+    setTitle(n, title); touch(n);
+    if (n.locked) { seal(n, n.html, unlocked).then(() => { persist(); renderAll(); }); } else persist();
     if (id === currentId) openNote(id); else renderAll();
     Planner.toast('Renamed');
   }
   function startRename(id) {
-    const n = byId(id); if (!n || n.trashed) return;
+    const n = byId(id); if (!n || n.trashed || (n.locked && !isUnlocked(id))) return;
     closeMenu();
     if (renaming) finishRename(true);
     const row = document.querySelector(`.note[data-id="${id}"]`); if (!row) return;
@@ -630,6 +809,8 @@
       { label: 'Delete permanently…', icon: '✕', danger: true, run: () => deleteForever(n.id) },
     ];
     const folders = state.folders.filter((f) => !f.deleted);
+    const sealed = n.locked && !isUnlocked(n.id);
+    const contentsOnly = new Set(sealed ? ['Rename', 'Duplicate', 'Share…', 'Copy text', 'Export'] : n.locked ? ['Duplicate'] : []);   // need the text, or would copy it unencrypted
     return [
       { label: 'Open', icon: '↗', run: () => openNote(n.id) },
       { label: 'Rename', icon: '✎', run: () => startRename(n.id) },
@@ -644,10 +825,12 @@
       { label: 'Copy text', icon: '⎘', run: () => copyNoteText(n.id) },
       { label: 'Export', icon: '⤓', sub: exportItems(n.id) },
       { sep: true },
+      ...(n.locked ? (sealed ? [] : [{ label: 'Lock now', icon: LOCK_MARK, run: () => lockNow(n.id) }, { label: 'Remove lock', icon: LOCK_MARK, run: () => removeLock(n.id) }])
+        : [{ label: 'Lock with password…', icon: LOCK_MARK, run: () => askLockPassword(n.id) }]),
       { label: n.archived ? 'Unarchive' : 'Archive', icon: ICON_SVG('archive'), run: () => setArchived(n.id, !n.archived) },
       { label: 'Move to Trash', icon: '🗑', run: () => trash(n.id, true) },
       { label: 'Delete permanently…', icon: '✕', danger: true, run: () => deleteForever(n.id) },
-    ];
+    ].filter((it) => !contentsOnly.has(it.label));
   }
   const ICON_SVG = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
   const menuHTML = (items) => items.map((it, i) => it.sep ? '<div class="ctx-sep" role="separator"></div>'
@@ -812,6 +995,27 @@
   labelSideButtons();
   $('#launchBtn').onclick = () => Planner.openLauncher();
   $('#backBtn').onclick = () => openNote(null);
+  $('#lockBtn').onclick = () => { const n = byId(currentId); if (n) (n.locked ? lockNow(n.id) : askLockPassword(n.id)); };
+  $('#lockBack').onclick = () => openNote(null);
+  $('#lockScreen').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const n = byId(currentId), go = $('#lockGo'), err = $('#lockErr');
+    if (!n || !n.enc) return;
+    go.disabled = true; go.textContent = 'Unlocking…'; err.textContent = '';
+    try {
+      const salt = b64ToBytes(n.enc.salt), key = await lockKey($('#lockPass').value, salt, n.enc.it);
+      n.html = await openSealed(n.enc, key);             // fails if the password is wrong
+      unlocked = { id: n.id, key, salt, it: n.enc.it, dirty: false };
+      openNote(n.id);
+    } catch { err.textContent = 'That password isn\u2019t right.'; $('#lockPass').select(); }
+    go.disabled = false; go.textContent = 'Unlock';
+  });
+  // after 5 minutes without touching the app, an open locked note closes again (also after the app was in the background)
+  let lastActive = Date.now();
+  ['pointerdown', 'keydown'].forEach((ev) => addEventListener(ev, () => { lastActive = Date.now(); }, true));
+  const relockIfIdle = () => { if (unlocked && Date.now() - lastActive > LOCK_AFTER) { const id = unlocked.id; relock(); if (currentId === id) openNote(id); } };
+  setInterval(relockIfIdle, 15000);
+  document.addEventListener('visibilitychange', relockIfIdle);
   $('#newNote').onclick = newNote;
   $('#emptyNew').onclick = newNote;
   // New sketch: a note titled "Sketch" with the drawing pad open; cancelling without drawing removes the empty note
@@ -974,7 +1178,7 @@
     const r = e.currentTarget.getBoundingClientRect();
     openNoteMenu(currentId, r.right - 230, r.bottom + 4, exportItems(currentId));
   };
-  $('#exportAll').onclick = () => download('notes-backup-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(state, null, 2), 'application/json');
+  $('#exportAll').onclick = () => download('notes-backup-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(state, sealedOnly, 2), 'application/json');
   $('#importFile').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
     try {
@@ -1214,7 +1418,7 @@
     }
     await pool(need, 4, async ([nid, f, ru]) => {
       const j = await (await drive(`/drive/v3/files/${f.id}?alt=media`)).json();
-      const n = { id: nid, folder: j.folder || null, pinned: !!j.pinned, pinTop: !!j.pinTop, archived: !!j.archived, trashed: !!j.trashed, deleted: false, html: j.html || '', created: j.created || ru, updated: ru, sv: ru, fid: f.id };
+      const n = { id: nid, folder: j.folder || null, pinned: !!j.pinned, pinTop: !!j.pinTop, archived: !!j.archived, trashed: !!j.trashed, deleted: false, locked: !!j.locked, lockTitle: j.lockTitle, enc: j.enc, html: j.html || '', created: j.created || ru, updated: ru, sv: ru, fid: f.id };
       const l = byId(nid);
       if (l) Object.assign(l, n); else state.notes.push(n);
       changed.add(nid);
@@ -1274,7 +1478,7 @@
         }
         delete n.fid; n.sv = u; return;
       }
-      const content = { id: n.id, folder: n.folder || null, pinned: !!n.pinned, pinTop: !!n.pinTop, archived: !!n.archived, trashed: !!n.trashed, html: n.html || '', created: n.created || u, updated: u };
+      const content = { id: n.id, folder: n.folder || null, pinned: !!n.pinned, pinTop: !!n.pinTop, archived: !!n.archived, trashed: !!n.trashed, locked: !!n.locked, lockTitle: n.lockTitle, enc: n.enc, html: n.locked ? '' : n.html || '', created: n.created || u, updated: u };
       const meta = { name: fileName(n), appProperties: { kind: 'note', nid: n.id, updated: String(u) } };
       if (n.fid) {
         try { await upload('PATCH', `/upload/drive/v3/files/${n.fid}?uploadType=multipart&fields=id`, meta, content); }
@@ -1501,7 +1705,13 @@
           const n = byId(currentId);
           if (currentId && changed.has(currentId)) {
             if (!n || n.deleted) openNote(null);
-            else if (document.activeElement !== editor) { editor.innerHTML = n.html; editor.classList.toggle('is-empty', looksEmpty(n)); Blocks.hydrate(editor); Blocks.renderBacklinks(n); renderActions(); setStatus(); }
+            else if (isUnlocked(currentId) || n.locked) {       // a locked note changed on another device
+              try {
+                if (!n.locked || !unlocked) throw 0;
+                n.html = await openSealed(n.enc, unlocked.key);
+                if (document.activeElement !== editor) { editor.innerHTML = n.html; Blocks.hydrate(editor); setStatus(); }
+              } catch { unlocked = null; openNote(currentId); }  // its lock or password changed: ask again
+            } else if (document.activeElement !== editor) { editor.innerHTML = n.html; editor.classList.toggle('is-empty', looksEmpty(n)); Blocks.hydrate(editor); Blocks.renderBacklinks(n); renderActions(); setStatus(); }
           }
         }
       } while (again);
@@ -1645,7 +1855,9 @@
     state: () => state, persist, uid, renderSidebar, native, showPlanner, setView, calendar: calendarApi,
     layout: () => showPlanner(Planner.isView(view.type)),
     notesList: () => state.notes.filter((n) => !n.deleted && !n.trashed).sort((a, b) => b.updated - a.updated)
-      .map((n) => ({ id: n.id, title: info(n).title, text: info(n).text })),
+      .map((n) => ({ id: n.id, title: info(n).title, text: (info(n).text + ' ' + imageText(n)).trim() })),
+    imagesRead: () => { if (query.trim()) renderList(); },
+    noteIsLocked: (id) => { const n = byId(id); return !!(n && n.locked); },
     gotoNote: (id) => { const n = byId(id); if (!n || n.deleted) return; setView(n.trashed ? 'trash' : 'all'); openNote(id); },
     createNote: (title) => {
       newNote();

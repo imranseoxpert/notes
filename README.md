@@ -7,7 +7,8 @@ A fast, private notes app and day planner for **Mac**, **Windows**, **iPhone** a
 ## Features
 
 **Writing**
-- Rich text: headings, bold / italic / underline / strikethrough, highlight, lists, checklists, quotes, code, links, dividers
+- Rich text: headings, bold / italic / underline / strikethrough, highlight, text colours, fonts and sizes, lists, checklists, quotes, code, links, dividers
+- Lock a note with a password (encrypted on your device; a forgotten password can't be recovered)
 - `/` block menu: callouts, toggles, tables, table of contents, embedded notes, sub-pages, task boards, templates
 - `[[Note links]]` with backlinks, `#tags`, folders, favorites, trash, daily notes
 - Markdown shortcuts (`#`, `-`, `1.`, `[]`, `>`) and Markdown / Obsidian / Joplin import
@@ -16,6 +17,7 @@ A fast, private notes app and day planner for **Mac**, **Windows**, **iPhone** a
 - Photos, videos, PDFs (with preview), audio and any file: pick, paste or drop
 - Record audio, take a photo, scan documents into a PDF, and draw sketches (pen, highlighter, eraser; mouse, trackpad, Apple Pencil or finger), right in a note
 - Right-click a picture to save it, copy it (pastes into any app) or share it
+- Search finds text inside your photos and scans, in English and Bengali, read on your device
 
 **Planner**
 - Today, Upcoming, Calendar (day / week / month), Tasks, Reminders and Events
@@ -83,7 +85,11 @@ Releases are built by GitHub Actions: push a tag like `v1.1.0` and the Mac, Wind
 
 ## Privacy
 
-There's no backend. Notes are stored in your browser / app storage and, if you turn on sync, as files in your own Google Drive. Nothing is sent anywhere else. Notes in Drive are not end-to-end encrypted.
+There's no backend. Notes are stored in your browser / app storage and, if you turn on sync, as files in your own Google Drive. Your notes aren't sent anywhere else. Notes in Drive are not end-to-end encrypted, except the text of notes you lock.
+
+**Locked notes:** the text is encrypted on your device (AES-256-GCM, with a key made from your password by PBKDF2) before it's saved or synced. The first line stays visible as the title, and photos, recordings and files in a locked note are hidden in the app but not encrypted. Drive may keep older unencrypted revisions of a note for a while after you lock it.
+
+**Text in pictures:** the reader is the open-source [Tesseract](https://github.com/naptha/tesseract.js). Your pictures stay on your device, but the reader and its language data (a few MB) download once from the public [jsDelivr](https://www.jsdelivr.com/) CDN, which can see that request like any website.
 
 ## Contributors
 

@@ -62,6 +62,15 @@ try { var t = localStorage.getItem('notes-theme'); document.documentElement.data
       <p>No note selected</p>
       <button class="btn" id="emptyNew">New note</button>
     </div>
+    <form class="lock-screen" id="lockScreen" hidden autocomplete="off">
+      <button class="icon-btn back-btn" id="lockBack" type="button" title="Back" aria-label="Back">‹</button>
+      <div class="lock-big"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+      <h2 id="lockName"></h2>
+      <p>This note is locked. Enter its password to read it.</p>
+      <input type="password" id="lockPass" placeholder="Password" aria-label="Password" autocomplete="off">
+      <div class="auth-err" id="lockErr" role="alert"></div>
+      <button class="btn" id="lockGo" type="submit">Unlock</button>
+    </form>
     <div class="editor-wrap" id="editorWrap" hidden>
       <div class="topbar">
         <button class="icon-btn back-btn" id="backBtn" title="Back">‹</button>
@@ -77,6 +86,7 @@ try { var t = localStorage.getItem('notes-theme'); document.documentElement.data
           <button data-cmd="underline" title="Underline (Ctrl/Cmd+U)"><u>U</u></button>
           <button data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
           <button data-cmd="highlight" title="Highlight">▮</button>
+          <button data-cmd="format" title="Text colour, font and size" aria-label="Text colour, font and size" aria-haspopup="true" class="tb-format">Aa</button>
           <span class="sep"></span>
           <button data-cmd="ul" title="Bulleted list">•≡</button>
           <button data-cmd="ol" title="Numbered list">1≡</button>
@@ -94,6 +104,7 @@ try { var t = localStorage.getItem('notes-theme'); document.documentElement.data
           <button class="icon-btn" id="pinBtn" title="Pin">☆</button>
           <button class="icon-btn" id="shareBtn" title="Share" aria-label="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg></button>
           <button class="icon-btn" id="exportBtn" title="Export as PDF, Word, Markdown…" aria-label="Export">⤓</button>
+          <button class="icon-btn" id="lockBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
           <button class="icon-btn" id="trashBtn" title="Move to trash">🗑</button>
           <button class="icon-btn" id="restoreBtn" title="Restore" hidden>↩</button>
           <button class="icon-btn danger" id="deleteBtn" title="Delete forever" hidden>✕</button>

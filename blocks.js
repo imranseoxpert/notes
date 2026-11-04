@@ -57,6 +57,7 @@
       catch (err) { C.toast(`Couldn't save “${name}” on this device: ${err && err.message ? err.message : err}`); continue; }
       insertBlock(`<figure class="att" data-att="${id}" data-kind="${kind}" data-name="${esc(name)}" data-type="${esc(type)}" data-size="${blob.size}" contenteditable="false"></figure>`);
       C.toast(`Added ${name} · ${fmtSize(blob.size)}`);
+      if (reader.wants(kind, name)) reader.add(id);
     }
     C.scheduleSync();
   }
@@ -108,6 +109,7 @@
       }
     }
     fig.dataset.state = 'ready';
+    if (reader.wants(kind, name) && !rec.ocrAt && !C.noteIsLocked(C.currentId())) reader.add(id);
     const url = urlFor(rec);
     const bar = (extra = '') => `<div class="att-bar"><span class="att-ic">${fileIcon(name, kind)}</span><div><b>${esc(name)}</b><span>${fmtSize(rec.size)}</span></div>${extra}<a class="pl-btn" href="${url}" download="${esc(name)}">Save</a></div>`;
     if (kind === 'image') {
@@ -172,6 +174,90 @@
     if (Media.canShareFiles()) items.push({ sep: true }, { label: 'Share…', icon: Media.ICONS.share, run: () => get().then((f) => Media.shareFile(f.blob, f.name, at), (err) => C.toast(`Couldn’t share: ${why(err)}`)) });
     C.openMenu(e.clientX, e.clientY, items);
   }
+
+  // ---------- finding text inside photos and scans ----------
+  // Tesseract (open source) reads the text on this device: the picture never leaves it. The reader and its English and
+  // Bengali language data (a few MB) download from the jsDelivr CDN the first time, and only then. Results are kept with
+  // the attachment on this device, so each picture is read once; a failed download just tries again later.
+  const reader = (() => {
+    const LIB = 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js', LANGS = 'eng+ben', MAX_SIDE = 2400, MAX_PDF = 60 * 1048576;
+    const found = new Map(), queue = [];
+    let worker = null, busy = false, script = null, idle = null;
+    const wants = (kind, name) => kind === 'image' || (kind === 'pdf' && /^Scan /.test(name || ''));
+    const loadLib = () => script || (script = new Promise((ok, no) => {
+      const s = document.createElement('script');
+      s.src = LIB; s.onload = ok;
+      s.onerror = () => { script = null; s.remove(); no(new Error('could not download the text reader')); };
+      document.head.appendChild(s);
+    }));
+    async function start() {
+      if (worker) return worker;
+      await loadLib();
+      worker = await window.Tesseract.createWorker(LANGS);
+      return worker;
+    }
+    async function readPicture(w, blob) {
+      const bmp = await createImageBitmap(blob);
+      const scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      bmp.close();
+      const { data } = await w.recognize(c, {}, { text: true, blocks: true });
+      const words = (data.blocks || []).flatMap((b) => b.paragraphs).flatMap((p) => p.lines).flatMap((l) => l.words);
+      return (words.length ? words.filter((x) => x.confidence >= 55).map((x) => x.text).join(' ') : data.text || '').replace(/\s+/g, ' ').trim();   // photos without text read as low-confidence noise
+    }
+    // our scanned PDFs hold one JPEG per page
+    async function pagesOfScan(blob) {
+      if (blob.size > MAX_PDF) return [];
+      const bytes = new Uint8Array(await blob.arrayBuffer()), head = new TextDecoder('latin1').decode(bytes);
+      return [...head.matchAll(/\/DCTDecode \/Length (\d+) >>\nstream\n/g)].map((m) => {
+        const at = m.index + m[0].length;
+        return new Blob([bytes.subarray(at, at + +m[1])], { type: 'image/jpeg' });
+      });
+    }
+    async function pump() {
+      if (busy || !queue.length) return;
+      busy = true; clearTimeout(idle);
+      let w;
+      try { w = await start(); }
+      catch (err) { busy = false; console.warn('text reader unavailable', err); return; }           // offline: the queue waits
+      try { if (!localStorage.getItem('notes-ocr-told')) { localStorage.setItem('notes-ocr-told', '1'); C.toast('Reading text in your pictures so search can find it. This stays on your device.'); } } catch {}
+      while (queue.length) {
+        const id = queue[0];
+        let text = '';
+        try {
+          const rec = await store.get(id);
+          if (rec && !rec.ocrAt) {
+            const parts = /pdf/.test(rec.type) ? await pagesOfScan(rec.blob) : [rec.blob];
+            const out = [];
+            for (const p of parts) out.push(await readPicture(w, p));
+            text = out.join(' ').trim();
+            if (text.replace(/\s/g, '').length < 3) text = '';           // a stray letter from a photo with no text
+          }
+        } catch (err) { console.warn('could not read text in', id, err); }                          // an unreadable picture isn't retried
+        const fresh = await store.get(id).catch(() => null);                                        // sync may have updated it meanwhile
+        if (fresh && !fresh.ocrAt) { fresh.ocrText = text; fresh.ocrAt = Date.now(); await store.put(fresh).catch(() => {}); }
+        if (text) { found.set(id, text); C.imagesRead(); }
+        queue.shift();
+      }
+      busy = false;
+      idle = setTimeout(() => { if (worker && !queue.length) { worker.terminate(); worker = null; } }, 60000);   // gives its memory back
+    }
+    const add = (id) => { if (!queue.includes(id)) queue.push(id); pump(); };
+    addEventListener('online', pump);
+    async function init() {
+      const recs = await store.all().catch(() => []);
+      recs.forEach((r) => { if (r.ocrText) found.set(r.id, r.ocrText); });
+      if (found.size) C.imagesRead();
+      if (innerWidth <= 900) return;                     // phones: only pictures you add or open, to save data and battery
+      setTimeout(() => {
+        const inNotes = new Set(C.state().notes.filter((n) => !n.deleted && !n.locked).flatMap((n) => [...n.html.matchAll(/data-att="([^"]+)"/g)].map((m) => m[1])));
+        recs.filter((r) => !r.ocrAt && inNotes.has(r.id) && wants(kindOf(r.type || '', r.name), r.name)).forEach((r) => add(r.id));
+      }, 15000);
+    }
+    return { wants, add, init, textIn: (html) => [...html.matchAll(/data-att="([^"]+)"/g)].map((m) => found.get(m[1])).filter(Boolean).join(' ') };
+  })();
 
   // ---------- caret and block helpers ----------
   function topBlock(node) {
@@ -686,10 +772,12 @@
       C = core; ed = core.editor;
       document.addEventListener('selectionchange', onSelectionChange);
       ed.addEventListener('contextmenu', onContextMenu);
+      reader.init();
       document.addEventListener('mousedown', (e) => { if (menu && !menu.el.contains(e.target)) closeMenu(); });
       document.addEventListener('scroll', () => { if (bar && !bar.hidden) showTableBar(); if (menu) positionMenu(); }, true);
       $('#backlinks').addEventListener('click', (e) => { const b = e.target.closest('[data-note]'); if (b) C.gotoNote(b.dataset.note); });
     },
+    imageText: (html) => reader.textIn(html),
     store, addFiles, pick, hydrate, serialize, renderBacklinks, onInput, onKeydown, onClick, dailyNote, importFiles, mdToHtml,
     openMenu: () => { ensureCaret(); document.execCommand('insertText', false, ' /'); openMenuAtCaret('slash', 1); },
     closeMenu,

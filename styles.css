@@ -671,3 +671,32 @@ html, body { overflow: hidden; }
   border: 1px solid var(--accent); border-radius: 6px; padding: 2px 6px; outline: none; }
 @media (max-width: 900px) { .rename-input { font-size: 16px; } }
 .ctx-ic .pin-ic { width: 15px; height: 15px; stroke: currentColor; }
+
+/* Text colour, font and size */
+.editor font[size="2"] { font-size: .85em; } .editor font[size="5"] { font-size: 1.35em; } .editor font[size="6"] { font-size: 1.75em; }
+.toolbar button.tb-format { font-weight: 600; font-family: Georgia, serif; }
+.fmt-pop { position: fixed; z-index: 50; width: 292px; max-width: calc(100vw - 16px); padding: 10px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); box-shadow: 0 12px 36px rgba(0,0,0,.28); display: flex; flex-direction: column; gap: 6px; }
+.fmt-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.fmt-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.fmt-row button { border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 6px; padding: 4px 8px; font-size: 13px; cursor: pointer; }
+.fmt-row button:hover { background: var(--bg-hover); }
+.fmt-row .fmt-swatch { width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1px solid var(--line); }
+.fmt-row .fmt-swatch:hover { outline: 2px solid var(--text); outline-offset: 1px; }
+.fmt-swatch.clear { background: linear-gradient(135deg, var(--bg) 46%, #e5484d 46% 54%, var(--bg) 54%); }
+
+/* Locked notes */
+.lock-screen { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center; }
+.lock-screen[hidden] { display: none; }
+.lock-screen h2 { margin: 0; font-size: 18px; max-width: 100%; overflow-wrap: anywhere; }
+.lock-screen p { margin: 0; color: var(--muted); }
+.lock-screen input { width: 100%; max-width: 280px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 16px; outline: none; text-align: center; }
+.lock-screen input:focus { border-color: var(--accent); }
+.lock-screen .back-btn { position: absolute; top: 8px; left: 8px; }
+.lock-big svg { width: 44px; height: 44px; display: block; color: var(--accent-text); }
+.lock-form { display: flex; flex-direction: column; gap: 10px; }
+.lock-form p { margin: 0; line-height: 1.45; }
+.lock-note { color: var(--muted); font-size: 13px; }
+.lock-form input { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 16px; outline: none; }
+.lock-form input:focus { border-color: var(--accent); }
+.md-lock { max-width: 420px; }
+#lockBtn.on { color: var(--accent); }

@@ -51,6 +51,7 @@
     ul.checklist { list-style: none; padding-left: 4pt; } ul.checklist li::before { content: "☐  "; } ul.checklist li.done::before { content: "☑  "; } ul.checklist li.done { color: #777; text-decoration: line-through; }
     .callout { background: #f6f5f1; border-radius: 6px; padding: 8pt 10pt; margin: 8pt 0; }
     .tg-h { font-weight: 600; } .tg-b { padding-left: 14pt; }
+    font[size="2"] { font-size: .85em; } font[size="5"] { font-size: 1.35em; } font[size="6"] { font-size: 1.75em; }
     mark { background: #fff0a0; } hr { border: 0; border-top: 1px solid #ddd; margin: 12pt 0; }
     .nlink { color: #8a6200; } .file, .doc { color: #555; } a { color: #1a73e8; }`;
   async function htmlDocument(n) {
@@ -150,9 +151,11 @@
     let relN = 10, picN = 1;
     const rel = (type, target, ext) => { const id = 'rId' + relN++; rels.push(`<Relationship Id="${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${type}" Target="${X(target)}"${ext ? ' TargetMode="External"' : ''}/>`); return id; };
     const run = (t, f) => {
-      const pr = (f.b ? '<w:b/>' : '') + (f.i ? '<w:i/>' : '') + (f.u || f.link ? '<w:u w:val="single"/>' : '') + (f.s ? '<w:strike/>' : '') +
-        (f.hl ? '<w:highlight w:val="yellow"/>' : '') + (f.code ? '<w:rFonts w:ascii="Menlo" w:hAnsi="Menlo" w:cs="Menlo"/><w:shd w:val="clear" w:fill="F3F1EC"/>' : '') +
-        (f.link ? '<w:color w:val="1A73E8"/>' : '') + (f.muted ? '<w:color w:val="777777"/>' : '');
+      const face = f.code ? 'Menlo' : f.face;
+      const color = f.link ? '1A73E8' : f.muted ? '777777' : f.color;
+      const pr = (face ? `<w:rFonts w:ascii="${X(face)}" w:hAnsi="${X(face)}" w:cs="${X(face)}"/>` : '') + (f.b ? '<w:b/>' : '') + (f.i ? '<w:i/>' : '') + (f.s ? '<w:strike/>' : '') +
+        (color ? `<w:color w:val="${color}"/>` : '') + (f.sz ? `<w:sz w:val="${f.sz}"/><w:szCs w:val="${f.sz}"/>` : '') +
+        (f.hl ? '<w:highlight w:val="yellow"/>' : '') + (f.u || f.link ? '<w:u w:val="single"/>' : '') + (f.code ? '<w:shd w:val="clear" w:fill="F3F1EC"/>' : '');
       return `<w:r>${pr ? `<w:rPr>${pr}</w:rPr>` : ''}<w:t xml:space="preserve">${X(t)}</w:t></w:r>`;
     };
     const runs = (node, f = {}) => {
@@ -171,6 +174,14 @@
         if (/^(S|STRIKE|DEL)$/.test(tag)) g.s = 1;
         if (tag === 'MARK') g.hl = 1;
         if (tag === 'CODE') g.code = 1;
+        if (tag === 'FONT') {
+          const hex = /^#([0-9a-f]{6})$/i.exec(c.getAttribute('color') || '');
+          if (hex) g.color = hex[1].toUpperCase();
+          const sz = { 2: 19, 5: 30, 6: 38 }[c.getAttribute('size')];
+          if (sz) g.sz = sz;
+          const family = (c.getAttribute('face') || '').split(',')[0].trim().replace(/["']/g, '');
+          if (family) g.face = family;
+        }
         if (c.classList.contains('nlink')) g.b = 1;
         out += runs(c, g);
       }

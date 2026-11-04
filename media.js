@@ -639,6 +639,7 @@
 
   window.Media = {
     init(core) { C = core; },
+    modal, head,
     ICONS, openMenu, takePhoto, recordAudio, scanDocuments, addSketch, share, shareFile, canShareFiles, pdfFromJpegs,
   };
 })();
