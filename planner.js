@@ -267,7 +267,7 @@
   const entryRow = (x, o) => (x.kind === 'event' ? eventRow(x.item, x.date, o) : taskRow(x.item, o));
   function header(title, sub, controls = '') {
     return `<div class="pl-head">
-      <button class="icon-btn pl-menu" data-act="menu" title="Sidebar" aria-label="Sidebar">☰</button>
+      <button class="icon-btn pl-menu" data-act="menu" title="${C.sideLabel()}" aria-label="${C.sideLabel()}">${C.sideIcon}</button>
       <div class="pl-title"><h1>${esc(title)}</h1>${sub ? `<div class="pl-sub">${esc(sub)}</div>` : ''}</div>
       <div class="pl-ctrl">${controls}<button class="icon-btn pl-inbox-btn${prefs.inbox ? ' on' : ''}" data-act="inbox" title="Inbox panel" aria-label="Toggle inbox">▤</button></div></div>`;
   }
@@ -635,7 +635,7 @@
     if (act === 'toggle' && row) { const t = findTask(row.dataset.id); if (t) toggleTask(t); return; }
     if (act === 'join' && row) { const ev = findEvent(row.dataset.id); if (ev && ev.link) openLink(ev.link); return; }
     switch (act) {
-      case 'menu': qs('#app').classList.toggle('show-side'); return;
+      case 'menu': C.toggleSidebar(); return;
       case 'inbox': prefs.inbox = !prefs.inbox; savePrefs(); C.layout(); render(); return;
       case 'day': selDay = a.dataset.date; render(); return;
       case 'today': selDay = stripStart = calAnchor = todayStr(); render(); return;

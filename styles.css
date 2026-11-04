@@ -82,7 +82,7 @@ html, body { overflow: hidden; }
 .icon-btn.danger:hover { color: var(--danger); }
 .icon-btn.on { color: var(--accent); }
 .btn { background: var(--accent); border: 0; color: #222; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-.menu-btn, .back-btn { display: none; }
+.back-btn { display: none; }
 
 /* Editor */
 .editor-pane { min-width: 0; display: flex; flex-direction: column; background: var(--bg); }
@@ -129,13 +129,15 @@ html, body { overflow: hidden; }
   .editor-pane { display: none; }
   .app.editing .editor-pane { display: flex; }
   .app.editing .list-pane { display: none; }
-  .menu-btn, .back-btn { display: inline-flex; }
+  .back-btn { display: inline-flex; }
 }
 
 /* Desktop: collapse sidebar (View > Toggle Sidebar) */
 @media (min-width: 901px) {
   .app.hide-side { grid-template-columns: 0 300px 1fr; }
-  .app.hide-side .sidebar { padding: 0; border: 0; overflow: hidden; }
+  .app.hide-side .sidebar { padding: 0; border: 0; overflow: hidden; visibility: hidden; }
+  .app.planner-mode.hide-side { grid-template-columns: 0 1fr; }
+  .app.planner-mode.inbox-open.hide-side { grid-template-columns: 0 1fr 300px; }
 }
 
 /* Account + sign-in */
@@ -207,7 +209,6 @@ html, body { overflow: hidden; }
 .pl-title h1 { margin: 0; font-size: 28px; line-height: 1.15; letter-spacing: -.01em; }
 .pl-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
 .pl-ctrl { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
-.pl-menu { display: none; }
 .pl-btn { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
 .pl-btn:hover { background: var(--bg-hover); }
 .pl-btn.primary { background: var(--accent); border-color: var(--accent); color: #222; font-weight: 600; }
@@ -380,7 +381,6 @@ html, body { overflow: hidden; }
 
 @media (max-width: 900px) {
   .app.planner-mode, .app.planner-mode.inbox-open { grid-template-columns: 1fr; }
-  .pl-menu { display: inline-flex; }
   .pl-head { padding: 12px 14px 6px; }
   .pl-title h1 { font-size: 22px; }
   .pl-body { padding: 4px 14px 40px; }

@@ -784,7 +784,32 @@
       if (nav) setView(nav.dataset.type, nav.dataset.id || undefined);
     } else if (!e.target.closest('#menuBtn, .pl-menu')) $('#app').classList.remove('show-side');
   });
-  $('#menuBtn').onclick = () => $('#app').classList.toggle('show-side');
+  // Hide / show the sidebar. Wide windows: it folds away and stays that way after a restart. Phones: it slides over.
+  const SIDE_KEY = KEY + '-side-hidden';
+  const SIDE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9.5 4v16M5.8 8.5h1M5.8 12h1"/></svg>';
+  const sideLabel = () => {
+    const shown = innerWidth > 900 ? !$('#app').classList.contains('hide-side') : $('#app').classList.contains('show-side');
+    return `${shown ? 'Hide' : 'Show'} sidebar (${navigator.platform.startsWith('Mac') ? '⌘' : 'Ctrl+'}\\)`;
+  };
+  function labelSideButtons() {
+    const label = sideLabel();
+    document.querySelectorAll('#menuBtn, .pl-menu').forEach((b) => { b.title = label; b.setAttribute('aria-label', label); });
+  }
+  function toggleSidebar() {
+    const app = $('#app');
+    if (innerWidth > 900) {
+      const hidden = app.classList.toggle('hide-side');
+      try { hidden ? localStorage.setItem(SIDE_KEY, '1') : localStorage.removeItem(SIDE_KEY); } catch {}
+    } else app.classList.toggle('show-side');
+  }
+  new MutationObserver(labelSideButtons).observe($('#app'), { attributes: true, attributeFilter: ['class'] });   // also when a tap elsewhere closes it
+  window.notesToggleSidebar = toggleSidebar;                // the Mac app's View menu
+  try { if (localStorage.getItem(SIDE_KEY)) $('#app').classList.add('hide-side'); } catch {}
+  $('#menuBtn').innerHTML = SIDE_ICON;
+  $('#menuBtn').onclick = toggleSidebar;
+  addEventListener('resize', labelSideButtons);
+  addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key === '\\') { e.preventDefault(); toggleSidebar(); } });
+  labelSideButtons();
   $('#launchBtn').onclick = () => Planner.openLauncher();
   $('#backBtn').onclick = () => openNote(null);
   $('#newNote').onclick = newNote;
@@ -1636,6 +1661,7 @@
     editor, byId, info, onEdit, run, formatBlock: block, renderAll, fetchAttachment, toMarkdown, textLines,
     currentId: () => currentId,
     openMenu: (x, y, items) => openNoteMenu(currentId, x, y, items),
+    toggleSidebar, sideIcon: SIDE_ICON, sideLabel,
     toast: (t) => Planner.toast(t),
     scheduleSync: () => scheduleSync(),
     taskFromNote: () => { const n = byId(currentId); if (n) Planner.taskFromNote(n.id, info(n).title); },

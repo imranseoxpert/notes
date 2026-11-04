@@ -152,7 +152,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
         webView.evaluateJavaScript("document.getElementById('app').classList.contains('planner-mode') ? Planner.openLauncher() : document.getElementById('search').focus()")
     }
     @objc func toggleSidebar() {
-        webView.evaluateJavaScript("document.getElementById('app').classList.toggle('hide-side')")
+        webView.evaluateJavaScript("window.notesToggleSidebar && notesToggleSidebar()")
     }
 
     // MARK: Native bridge (Google sign-in)
