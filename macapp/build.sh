@@ -10,7 +10,7 @@ rm -rf build && mkdir -p $APP/Contents/MacOS $APP/Contents/Resources/web
 swiftc -O -target arm64-apple-macos12 main.swift loopback.swift reminders.swift alarm.swift pdf.swift -o $APP/Contents/MacOS/Notes
 cp Info.plist $APP/Contents/
 cp alarm.wav $APP/Contents/Resources/
-cp ../index.html ../styles.css ../app.js ../planner.js ../blocks.js ../export.js ../media.js ../sw.js ../manifest.webmanifest $APP/Contents/Resources/web/
+cp ../index.html ../styles.css ../app.js ../planner.js ../blocks.js ../mindmap.js ../export.js ../media.js ../sw.js ../manifest.webmanifest $APP/Contents/Resources/web/
 cp -R ../icons $APP/Contents/Resources/web/
 cp $CONFIG $APP/Contents/Resources/web/config.js
 swiftc icon.swift -o build/icon && build/icon build/AppIcon.iconset

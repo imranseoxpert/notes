@@ -19,6 +19,14 @@ A fast, private notes app and day planner for **Mac**, **Windows**, **iPhone** a
 - Right-click a picture to save it, copy it (pastes into any app) or share it
 - Search finds text inside your photos and scans, in English and Bengali, read on your device
 
+**Mind maps**
+- Type `/mind map` to add a mind map to any note, or `/mind map from this note` to turn the note's headings and lists into one
+- Full-screen editor: Tab adds a subtopic, Enter a topic, just type to rename (or tap a selected topic on a phone)
+- Drag a topic anywhere and it stays connected; drop it onto another topic to move it there; undo and redo
+- 16 colour themes, 9 structures (mind map, logic chart, org chart, tree, timeline, fishbone, radial…), line styles, backgrounds, topic colours and shapes, markers and stickers
+- Maps live inside the note: they sync, work offline, show up in search, are encrypted in locked notes, and export as a picture (PDF, Word, HTML) or a list (Markdown, text). Save a map as PNG or SVG
+- The engine comes from [Mindloom](https://github.com/imranseoxpert/mindloom)
+
 **Planner**
 - Today, Upcoming, Calendar (day / week / month), Tasks, Reminders and Events
 - List, board (kanban) and grid views; priorities, subtasks, repeats, habits with streaks
@@ -75,6 +83,7 @@ Put your own Google credentials in `config.local.js` (same format as [`config.js
 | `app.js` | Notes, editor, sidebar, Google sign-in and Drive / Calendar sync |
 | `planner.js` | Today, Upcoming, Calendar, Tasks, Reminders, Events, quick add, alarms |
 | `blocks.js` | `/` menu, attachments, note links, tables, boards, templates, Markdown import |
+| `mindmap.js` | Mind map blocks and their full-screen editor (engine from [Mindloom](https://github.com/imranseoxpert/mindloom)) |
 | `media.js` | Record audio, take photo, scan documents, sketch, and the Share sheet |
 | `export.js` | PDF, Word, Markdown, HTML and text export |
 | `macapp/` | Mac app (Swift + WKWebView): sign-in, notifications, alarms, files, PDF, sharing |

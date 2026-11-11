@@ -336,6 +336,8 @@
     T('doc', 'Document', 'Embed another note as a card', '📄', 'Notes', () => openNotePicker(), 'embed page'),
     T('page', 'Sub-page', 'Create a new note inside this one', '📑', 'Notes', subPage, 'child page'),
     T('board', 'Board', 'A task board for this note', '▥', 'Planner', () => insertBlock('<div class="blk-board" contenteditable="false"></div>'), 'kanban tasks'),
+    T('mindmap', 'Mind map', 'Brainstorm with topics and branches', '🧠', 'Mind map', () => MindMap.insertBlank(), 'mindmap brainstorm diagram tree xmind'),
+    T('mindmap-note', 'Mind map from this note', 'Turn the headings and lists into a map', '🗺', 'Mind map', () => MindMap.insertFromNote(), 'mindmap outline visualize convert'),
     T('task', 'Task', 'A task linked to this note', '○', 'Planner', () => C.taskFromNote(), 'todo reminder'),
     T('toc', 'Table of contents', 'A list of this note’s headings', '≡', 'Other', () => insertBlock('<div class="blk-toc" contenteditable="false"></div>'), 'outline'),
     T('date', 'Today’s date', 'Insert the date', '📅', 'Other', () => document.execCommand('insertText', false, new Date().toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })), 'now'),
@@ -588,12 +590,14 @@
     root.querySelectorAll('.blk-doc').forEach(renderDoc);
     root.querySelectorAll('.blk-toc').forEach(renderToc);
     root.querySelectorAll('.blk-board').forEach(renderBoardEl);
+    root.querySelectorAll('.blk-mindmap').forEach((el) => MindMap.renderBlock(el));
   }
   /** The note's HTML without anything drawn at runtime (file previews, boards, cards). */
   function serialize(root) {
     const c = root.cloneNode(true);
     c.querySelectorAll('figure.att').forEach((f) => { f.innerHTML = ''; delete f.dataset.state; });
     c.querySelectorAll('.blk-board, .blk-doc, .blk-toc').forEach((el) => { el.innerHTML = ''; delete el.dataset.wired; el.classList.remove('broken'); });
+    c.querySelectorAll('.blk-mindmap').forEach((el) => MindMap.serializeBlock(el));   // keeps the map data and its text, for search
     return c.innerHTML;
   }
 
@@ -771,6 +775,7 @@
   window.Blocks = {
     init(core) {
       C = core; ed = core.editor;
+      MindMap.init(core);
       document.addEventListener('selectionchange', onSelectionChange);
       ed.addEventListener('contextmenu', onContextMenu);
       reader.init();
@@ -780,6 +785,7 @@
     },
     imageText: (html) => reader.textIn(html),
     store, addFiles, pick, hydrate, serialize, renderBacklinks, onInput, onKeydown, onClick, dailyNote, importFiles, mdToHtml,
+    _insertBlock: (html) => insertBlock(html),
     openMenu: () => { ensureCaret(); document.execCommand('insertText', false, ' /'); openMenuAtCaret('slash', 1); },
     closeMenu,
     afterEdit() { clearTimeout(tocTimer); tocTimer = setTimeout(() => ed.querySelectorAll('.blk-toc').forEach(renderToc), 300); },

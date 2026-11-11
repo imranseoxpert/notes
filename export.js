@@ -25,6 +25,9 @@
     });
     d.querySelectorAll('.blk-doc').forEach((el) => { const t = C.byId(el.dataset.note); el.outerHTML = `<p class="doc">📄 ${esc(t ? C.info(t).title : 'Note')}</p>`; });
     d.querySelectorAll('.blk-toc').forEach((el) => el.remove());
+    for (const el of [...d.querySelectorAll('.blk-mindmap')]) {
+      try { await MindMap.exportBlock(el, images); } catch (err) { el.outerHTML = '<p class="file">🧠 Mind map</p>'; }
+    }
     d.querySelectorAll('a.nlink').forEach((a) => {
       const t = C.byId(a.dataset.note), title = t ? C.info(t).title : a.textContent;
       if (keepLinks) a.textContent = title; else a.outerHTML = `<span class="nlink">${esc(title)}</span>`;
@@ -189,7 +192,7 @@
     };
     const p = (inner, style, extra = '') => `<w:p>${style || extra ? `<w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ''}${extra}</w:pPr>` : ''}${inner}</w:p>`;
     const picture = async (fig) => {
-      const rec = await attachment(fig.dataset.att);
+      const rec = fig.dataset.mmPng ? { blob: await (await fetch(fig.dataset.mmPng)).blob() } : await attachment(fig.dataset.att);
       if (!rec) return p(run('📎 ' + (fig.dataset.name || 'image'), { muted: 1 }));
       let img;
       try { img = await imageForWord(rec.blob); } catch { return p(run('📎 ' + (fig.dataset.name || 'image'), { muted: 1 })); }
