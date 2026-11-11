@@ -18,7 +18,7 @@ rm -f build/Notes/resources/default_app.asar
 APPDIR=build/Notes/resources/app
 mkdir -p $APPDIR/web
 cp main.js preload.js package.json $APPDIR/
-cp ../index.html ../styles.css ../app.js ../planner.js ../blocks.js ../export.js ../media.js ../manifest.webmanifest $APPDIR/web/
+cp ../index.html ../styles.css ../app.js ../planner.js ../blocks.js ../mindmap.js ../export.js ../media.js ../manifest.webmanifest $APPDIR/web/
 cp -R ../icons $APPDIR/web/       # no sw.js: service workers aren't needed in the desktop app
 cp $CONFIG $APPDIR/web/config.js
 # The yellow Notes icon: an .ico for shortcuts, installer, window and tray, and inside Notes.exe itself

@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 OUT=build/notes-web
 rm -rf build && mkdir -p $OUT
-cp ../index.html ../styles.css ../app.js ../planner.js ../blocks.js ../export.js ../media.js ../sw.js ../manifest.webmanifest $OUT/
+cp ../index.html ../styles.css ../app.js ../planner.js ../blocks.js ../mindmap.js ../export.js ../media.js ../sw.js ../manifest.webmanifest $OUT/
 cp -R ../icons $OUT/
 CONFIG=../config.js; [ -f ../config.local.js ] && CONFIG=../config.local.js
 WEB_ID=$(sed -n "s/.*googleWebClientId: *'\([^']*\)'.*/\1/p" $CONFIG)
