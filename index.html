@@ -29,6 +29,11 @@ try { var t = localStorage.getItem('notes-theme'); document.documentElement.data
       <button class="icon-btn" id="addFolder" title="New folder">+</button>
     </div>
     <div class="side-section" id="navFolders"></div>
+    <div class="side-head" id="smartHead">
+      <span>Smart folders</span>
+      <button class="icon-btn" id="addSmart" title="New smart folder (a saved search)">+</button>
+    </div>
+    <div class="side-section" id="navSmart"></div>
     <div class="side-head"><span>Tags</span></div>
     <div class="side-section" id="navTags"></div>
     <div class="account" id="account" hidden>
@@ -40,6 +45,9 @@ try { var t = localStorage.getItem('notes-theme'); document.documentElement.data
       <button class="link-btn" id="exportAll">Backup</button>
       <label class="link-btn">Restore<input type="file" id="importFile" accept="application/json" hidden></label>
       <label class="link-btn" title="Import Markdown or text files (Obsidian, Joplin, Bear…)">Import .md<input type="file" id="importMd" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple hidden></label>
+      <label class="link-btn" title="Import an Evernote export (.enex)">Import .enex<input type="file" id="importEnex" accept=".enex,application/xml,text/xml" hidden></label>
+      <button class="link-btn" id="frBtn" title="Find and replace, in this note or in all notes">Find &amp; replace</button>
+      <button class="link-btn" id="appLockBtn" title="Ask for a password when Notes is opened on this device">App lock</button>
     </div>
     <div class="theme-seg" id="themeSeg" role="radiogroup" aria-label="Appearance"></div>
   </aside>
@@ -49,6 +57,7 @@ try { var t = localStorage.getItem('notes-theme'); document.documentElement.data
       <button class="icon-btn menu-btn" id="menuBtn"></button>
       <input type="search" id="search" placeholder="Search notes">
       <button class="icon-btn" id="dailyBtn" title="Today’s daily note">📅</button>
+      <button class="icon-btn" id="graphBtn" title="Note graph: see how your notes link together" aria-label="Note graph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="8" r="2.4"/><circle cx="9" cy="18" r="2.4"/><circle cx="19" cy="19" r="1.8"/><path d="M8.2 7l7.4.7M7.2 8.2l1 7.3M16.6 10l-5 5.6M11.3 18.4l5.2.4"/></svg></button>
       <button class="icon-btn sketch-btn" id="newSketch" title="New sketch: a note you draw in" aria-label="New sketch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20c2-1 3.5-3 5-3s1.5 2 3 2 2.5-2 4-2"/><path d="M14.5 4.5l5 5L11 18H6v-5z"/></svg></button>
       <button class="icon-btn" id="newNote" title="New note (Ctrl/Cmd+Alt+N)" aria-label="New note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 4H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-4.5"/><path d="M18.1 3.4a2 2 0 0 1 2.8 2.8l-8.3 8.3-3.6.9.9-3.6z"/></svg></button>
     </div>
@@ -142,6 +151,7 @@ try { var t = localStorage.getItem('notes-theme'); document.documentElement.data
 <script src="blocks.js"></script>
 <script src="export.js"></script>
 <script src="media.js"></script>
+<script src="extras.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

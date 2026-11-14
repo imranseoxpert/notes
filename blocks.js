@@ -340,6 +340,7 @@
     T('mindmap-note', 'Mind map from this note', 'Turn the headings and lists into a map', '🗺', 'Mind map', () => MindMap.insertFromNote(), 'mindmap outline visualize convert'),
     T('task', 'Task', 'A task linked to this note', '○', 'Planner', () => C.taskFromNote(), 'todo reminder'),
     T('toc', 'Table of contents', 'A list of this note’s headings', '≡', 'Other', () => insertBlock('<div class="blk-toc" contenteditable="false"></div>'), 'outline'),
+    T('math', 'Maths equation', 'A LaTeX equation, rendered', '∑', 'Other', () => { if (window.Extras) Extras.insertMath(); }, 'latex equation formula tex'),
     T('date', 'Today’s date', 'Insert the date', '📅', 'Other', () => document.execCommand('insertText', false, new Date().toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })), 'now'),
     T('tpl-meeting', 'Meeting notes', 'Agenda, notes, action items', '🗓', 'Templates', () => insertTemplate('meeting'), 'template'),
     T('tpl-project', 'Project plan', 'Goal, milestones, tasks, risks', '🚀', 'Templates', () => insertTemplate('project'), 'template'),
@@ -591,12 +592,13 @@
     root.querySelectorAll('.blk-toc').forEach(renderToc);
     root.querySelectorAll('.blk-board').forEach(renderBoardEl);
     root.querySelectorAll('.blk-mindmap').forEach((el) => MindMap.renderBlock(el));
+    root.querySelectorAll('.blk-math').forEach((el) => { if (window.Extras) Extras.renderMath(el); });
   }
   /** The note's HTML without anything drawn at runtime (file previews, boards, cards). */
   function serialize(root) {
     const c = root.cloneNode(true);
     c.querySelectorAll('figure.att').forEach((f) => { f.innerHTML = ''; delete f.dataset.state; });
-    c.querySelectorAll('.blk-board, .blk-doc, .blk-toc').forEach((el) => { el.innerHTML = ''; delete el.dataset.wired; el.classList.remove('broken'); });
+    c.querySelectorAll('.blk-board, .blk-doc, .blk-toc, .blk-math').forEach((el) => { el.innerHTML = ''; delete el.dataset.wired; el.classList.remove('broken'); });
     c.querySelectorAll('.blk-mindmap').forEach((el) => MindMap.serializeBlock(el));   // keeps the map data and its text, for search
     return c.innerHTML;
   }
@@ -784,6 +786,7 @@
       $('#backlinks').addEventListener('click', (e) => { const b = e.target.closest('[data-note]'); if (b) C.gotoNote(b.dataset.note); });
     },
     imageText: (html) => reader.textIn(html),
+    ocrEnqueue: (id) => reader.add(id),
     store, addFiles, pick, hydrate, serialize, renderBacklinks, onInput, onKeydown, onClick, dailyNote, importFiles, mdToHtml,
     _insertBlock: (html) => insertBlock(html),
     openMenu: () => { ensureCaret(); document.execCommand('insertText', false, ' /'); openMenuAtCaret('slash', 1); },

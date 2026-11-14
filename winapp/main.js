@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, net, shell, Menu, ipcMain, Tray, nativeImage, Notification, screen, dialog, nativeTheme, clipboard, ClipboardItem } = require('electron');
+const { app, BrowserWindow, protocol, net, shell, Menu, ipcMain, Tray, nativeImage, Notification, screen, dialog, nativeTheme, clipboard, ClipboardItem, globalShortcut } = require('electron');
 const os = require('os');
 const http = require('http');
 const fs = require('fs');
@@ -213,6 +213,9 @@ app.whenReady().then(() => {
     { role: 'editMenu' },
     { label: 'View', submenu: [{ role: 'togglefullscreen' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { role: 'resetZoom' }] }
   ]));
+  // Quick capture: a system-wide Ctrl+Alt+N brings Notes up (even from the tray) with a fresh note.
+  globalShortcut.register('CommandOrControl+Alt+N', () => { showWindow(); runInPage("document.getElementById('newNote').click()"); });
+  app.on('will-quit', () => globalShortcut.unregisterAll());
   createWindow();
   if (process.platform === 'win32') { createTray(); ensureStartMenuShortcut(); }
 });

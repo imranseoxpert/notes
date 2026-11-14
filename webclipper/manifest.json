@@ -1,0 +1,31 @@
+{
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Save page to Notes"
+  },
+  "description": "Save a web page into your Notes app: it lands in the Notes folder in your Google Drive and appears in the app on every device.",
+  "host_permissions": [
+    "https://www.googleapis.com/*"
+  ],
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1tY7ai4owBtaJqcRUsrlLlVs7tBjqT+IwgVUierrQp10PgP0sEiFIYXTFRiYLohf8kMHcTluC+Zyb3xZsx2BUvJnYUZWnOGa9kx+t1PKtcK9i8wJwQQT2mCcof7B3qcwTqradcAvEblt6y2O9k3DxWGGjt1df0s56A8I2FJqVXO2/Y6FkeLQHNKR1I9qVSj0862JrZhE5iKizMuMmbqfb93jJ8o2y9++kIj5BuBFYd6LYz8eRuhixOS+XJB41WvumxOfA3Lcwl6oQSqqXem41VMDpFYs0Ewum1WrK1CzPO2xW/7JItftbeB/WkNYMh5LwmXLDF8Pz2zqQ3qeBZxpcwIDAQAB",
+  "manifest_version": 3,
+  "name": "Notes Web Clipper",
+  "oauth2": {
+    "client_id": "1081680979454-jdadbf3njts0td6tgm5qd6pmiqfuqr16.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.file"
+    ]
+  },
+  "permissions": [
+    "identity",
+    "scripting",
+    "activeTab",
+    "storage"
+  ],
+  "version": "1.0.0"
+}

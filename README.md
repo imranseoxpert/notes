@@ -12,12 +12,22 @@ A fast, private notes app and day planner for **Mac**, **Windows**, **iPhone** a
 - `/` block menu: callouts, toggles, tables, table of contents, embedded notes, sub-pages, task boards, templates
 - `[[Note links]]` with backlinks, `#tags`, folders, favorites, trash, daily notes
 - Markdown shortcuts (`#`, `-`, `1.`, `[]`, `>`) and Markdown / Obsidian / Joplin import
+- Smart folders: saved searches (text, tag, folder, what's inside, recency) that fill themselves in the sidebar
+- Find & replace in one note or in every note (Ctrl/Cmd+H), word and character counts with reading time
+- Version history: earlier versions of each note, kept on the device as you write — view or restore any of them
+- Merge two notes into one (links to the old note are updated for you)
+- A note-link graph: every note a dot, every `[[link]]` a line — click a dot to open it
+- Maths blocks: type `/math`, write LaTeX, see it rendered
+- Evernote import: bring a whole `.enex` export, attachments and tags included
 
 **Media**
 - Photos, videos, PDFs (with preview), audio and any file: pick, paste or drop
 - Record audio, take a photo, scan documents into a PDF, and draw sketches (pen, highlighter, eraser; mouse, trackpad, Apple Pencil or finger), right in a note
 - Right-click a picture to save it, copy it (pastes into any app) or share it
 - Search finds text inside your photos and scans, in English and Bengali, read on your device
+- "Text from picture" turns a photo, scan or sketch in the note into typed text under it (handwriting too, when it's clear)
+- Dictation: speak and it types (where the browser or OS offers speech recognition)
+- Transcribe a recording in a note into text, on your device (a speech model downloads once, about 150 MB)
 
 **Mind maps**
 - Type `/mind map` to add a mind map to any note, or `/mind map from this note` to turn the note's headings and lists into one
@@ -38,6 +48,10 @@ A fast, private notes app and day planner for **Mac**, **Windows**, **iPhone** a
 - Sync through Google Drive (one file per note; attachments included); works offline and catches up later
 - Share to Mail, Gmail, Outlook, Messages, WhatsApp, Telegram, X, Threads, LinkedIn, Facebook, Reddit, Bluesky, or the system share menu
 - Export to PDF, Word (.docx), Markdown, HTML or text
+- Publish a note to the web: a read-only page in your Drive with an "anyone with the link" address (unpublish any time)
+- Web Clipper: a small Chrome / Edge extension (in `webclipper/`) that saves the page you're reading — or your selection — straight into Notes
+- App lock: a password (or fingerprint / Face ID) asked when Notes opens on a device; locked notes can also be opened with fingerprint / Face ID where the device supports it (WebAuthn PRF)
+- Quick capture: the installed app gets a "New note" shortcut, and on Windows Ctrl+Alt+N brings Notes up with a fresh note from anywhere
 - Light, dark or system appearance
 
 ## Install

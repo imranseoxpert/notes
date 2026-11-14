@@ -782,3 +782,52 @@ html, body { overflow: hidden; }
   .mm-title { max-width: 110px; }
   .mm-panel { position: absolute; right: 0; top: 52px; bottom: 0; width: min(320px, 92vw); box-shadow: -8px 0 30px rgba(0,0,0,.2); z-index: 3; }
 }
+
+/* ---------- Extras (v1.5): smart folders, find & replace, history, graph, maths, publish, app lock ---------- */
+.fr-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--bg-list); }
+.fr-bar input[type="search"], .fr-bar input[type="text"] { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 6px 9px; font-size: 14px; color: var(--text); width: 170px; }
+.fr-bar input:focus { outline: none; border-color: var(--accent); }
+.fr-bar button { border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+.fr-bar button:hover { background: var(--bg-hover); }
+.fr-count { color: var(--muted); font-size: 13px; min-width: 64px; }
+.fr-casewrap { font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 3px; }
+.x-form { display: flex; flex-direction: column; gap: 10px; }
+.x-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.x-form input, .x-form select, .x-form textarea { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; font-size: 14px; color: var(--text); width: 100%; }
+.x-form input:focus, .x-form select:focus, .x-form textarea:focus { outline: none; border-color: var(--accent); }
+.x-form .x-check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); font-size: 14px; }
+.x-form .x-check input { width: auto; }
+.x-note { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin: 0; }
+.x-list { display: flex; flex-direction: column; gap: 6px; max-height: 46vh; overflow: auto; }
+.x-row { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.x-row .x-grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.x-row .x-grow b { font-size: 14px; }
+.x-row .x-grow span { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.x-preview { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; max-height: 40vh; overflow: auto; }
+.x-linkrow { display: flex; gap: 8px; }
+.x-linkrow input { flex: 1; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; font-size: 13px; color: var(--text); }
+.x-progress { height: 8px; border-radius: 4px; background: var(--bg-hover); overflow: hidden; }
+.x-progress .x-bar { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.md-sheet.md-graph { max-width: 880px; width: 94vw; }
+.graph-wrap { border: 1px solid var(--line); border-radius: 12px; background: var(--bg-list); }
+.graph-wrap svg { display: block; width: 100%; height: auto; max-height: 62vh; }
+.graph-wrap .glines line { stroke: var(--muted); stroke-width: 1; opacity: .45; }
+.graph-wrap .gnode { cursor: pointer; }
+.graph-wrap .gnode circle { fill: #7d9bbd; stroke: var(--bg); stroke-width: 1.5; }
+.graph-wrap .gnode circle.pin { fill: var(--accent); }
+.graph-wrap .gnode text { fill: var(--text); font-size: 11.5px; text-anchor: middle; pointer-events: none; }
+.graph-wrap .gnode:hover circle, .graph-wrap .gnode:focus circle { stroke: var(--accent-text); stroke-width: 2.5; }
+.blk-math { padding: 6px 10px; border-radius: 8px; cursor: pointer; overflow-x: auto; }
+.blk-math:hover { background: var(--bg-hover); }
+.math-fallback { font-family: Menlo, Consolas, monospace; }
+.math-preview { min-height: 30px; padding: 6px 4px; overflow-x: auto; }
+.blk-transcript { background: var(--bg-list); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 0 8px 8px 0; }
+.applock { position: fixed; inset: 0; z-index: 200; background: var(--bg-side); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.applock-card { background: var(--bg); width: 100%; max-width: 340px; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 10px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+.applock-card h2 { margin: 0; }
+.applock-card p { margin: 0 0 6px; color: var(--muted); }
+.applock-card input { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 16px; outline: none; }
+.applock-card .lock-big { display: flex; justify-content: center; }
+.applock-card .lock-big svg { width: 40px; height: 40px; }
+#bioBtn { margin-top: 4px; }
+.actions .icon-btn.on { color: #ff3b30; background: var(--bg-hover); }

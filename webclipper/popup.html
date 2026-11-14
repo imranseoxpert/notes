@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Save to Notes</title>
+<style>
+  body { font: 14px/1.45 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; width: 320px; margin: 0; padding: 16px; color: #1d1d1f; }
+  h1 { font-size: 16px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+  h1 img { width: 22px; height: 22px; border-radius: 5px; }
+  p { margin: 6px 0; color: #666; }
+  .page { font-weight: 600; color: #1d1d1f; word-break: break-word; }
+  button { display: block; width: 100%; margin-top: 10px; padding: 9px 12px; border: 0; border-radius: 8px; background: #e5a400; color: #221a00; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button.ghost { background: none; border: 1px solid #ddd; color: #1d1d1f; font-weight: 400; }
+  button:disabled { opacity: .55; cursor: default; }
+  #status { min-height: 20px; margin-top: 10px; }
+  #status.err { color: #c00; }
+  a { color: #8a6200; }
+</style>
+</head>
+<body>
+  <h1><img src="icon.png" alt=""> Save to Notes</h1>
+  <p id="who">Checking sign-in…</p>
+  <p class="page" id="pageTitle"></p>
+  <button id="signIn" hidden>Sign in with Google</button>
+  <button id="save" hidden>Save this page as a note</button>
+  <button id="saveSel" class="ghost" hidden>Save selection only</button>
+  <div id="status" role="status"></div>
+  <p><a href="https://imranseoxpert.github.io/notes/" target="_blank" rel="noopener">Open Notes</a></p>
+  <script src="popup.js"></script>
+</body>
+</html>

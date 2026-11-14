@@ -88,6 +88,7 @@
       if (view.type === 'pinned' && !n.pinned) return false;
       if (view.type === 'folder' && n.folder !== view.id) return false;
       if (view.type === 'tag' && !info(n).tags.includes(view.id)) return false;
+      if (view.type === 'smart' && !(window.Extras && Extras.matchSmart(view.id, n))) return false;
       if (q) { const i = info(n); if (!(i.title + ' ' + i.text).toLowerCase().includes(q) && !imageText(n).toLowerCase().includes(q)) return false; }
       return true;
     });
@@ -130,6 +131,7 @@
     live.forEach((n) => info(n).tags.forEach((t) => (tagCount[t] = (tagCount[t] || 0) + 1)));
     $('#navTags').innerHTML = Object.keys(tagCount).sort().map((t) => navItem('tag', t, '#' + t, tagCount[t])).join('') ||
       '<div class="nav" style="color:var(--muted);cursor:default">Type #tag in a note</div>';
+    if (window.Extras) Extras.renderSmart();
   }
   const ICONS = {
     today: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -152,6 +154,7 @@
     if (view.type === 'trash') return 'Trash';
     if (view.type === 'archive') return 'Archive';
     if (view.type === 'tag') return '#' + view.id;
+    if (view.type === 'smart') return window.Extras ? Extras.smartName(view.id) : 'Smart folder';
     const f = state.folders.find((x) => x.id === view.id);
     return f ? f.name : 'Folder';
   }
@@ -209,8 +212,10 @@
     const n = byId(currentId);
     if (!n) return;
     const i = info(n);
-    const words = n.locked ? textLines(n.html).join(' ').split(/\s+/).filter(Boolean).length : i.words;
-    $('#statusbar').innerHTML = `<span>${words} word${words === 1 ? '' : 's'}</span><span>${extra || 'Edited ' + new Date(n.updated).toLocaleString()}</span>`;
+    const text = n.locked ? textLines(n.html).join(' ') : i.text;
+    const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+    const read = Math.max(1, Math.round(words / 200));
+    $('#statusbar').innerHTML = `<span>${words} word${words === 1 ? '' : 's'} · ${text.length} character${text.length === 1 ? '' : 's'} · ${read} min read</span><span>${extra || 'Edited ' + new Date(n.updated).toLocaleString()}</span>`;
   }
 
   function renderAll() { renderSidebar(); renderList(); if (window.Planner && plannerReady && Planner.isView(view.type)) Planner.render(); }
@@ -231,7 +236,7 @@
     ['tasks', 'Tasks', '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12l2.5 2.5 4.5-5"/>'],
     ['reminders', 'Reminders', '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 21h4"/>']];
   function renderTabbar() {
-    const cur = ['folder', 'tag', 'pinned', 'trash', 'archive'].includes(view.type) ? 'all' : view.type;
+    const cur = ['folder', 'tag', 'pinned', 'trash', 'archive', 'smart'].includes(view.type) ? 'all' : view.type;
     $('#tabbar').innerHTML = TABS.map(([t, label, icon]) => `<button data-tab="${t}" class="${t === cur ? 'on' : ''}"${t === cur ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><span>${label}</span></button>`).join('');
   }
   function setView(type, id) {
@@ -258,6 +263,7 @@
       $('#lockName').textContent = info(n).title;
       $('#lockPass').value = ''; $('#lockErr').textContent = '';
       if (innerWidth > 900) $('#lockPass').focus();
+      if (window.Extras) Extras.lockShown(n);
       renderList();
       return;
     }
@@ -271,6 +277,7 @@
       setStatus();
       if (!n.trashed && !info(n).text) ed.focus();
     }
+    if (window.Extras && n) Extras.noteSeen(n);
     Blocks.renderBacklinks(n);
     renderList();
   }
@@ -302,6 +309,7 @@
       const cur = byId(currentId);
       if (cur && cur.locked && isUnlocked(cur.id) && unlocked.dirty) { const u = unlocked; u.dirty = false; await seal(cur, cur.html, u); }
       persist(); renderSidebar(); setStatus();
+      if (window.Extras && cur) Extras.noteSaved(cur);
     }, 400);
   }
 
@@ -391,6 +399,13 @@
     Planner.toast('Lock removed');
   }
   function lockNow(id) { relock(); if (currentId === id) openNote(id); renderAll(); }
+  // Unlock with a key obtained another way (fingerprint / Face ID: Extras unwraps the note's key with WebAuthn).
+  function unlockWithKey(id, html, key, salt, it) {
+    const n = byId(id); if (!n) return;
+    n.html = html;
+    unlocked = { id, key, salt, it, dirty: false };
+    openNote(id);
+  }
 
   function trash(id, flag) {
     const n = byId(id); if (!n) return;
@@ -800,6 +815,12 @@
     ctx = null;
   }
   const exportItems = (id) => Exporter.FORMATS.map((f) => ({ label: f.label, icon: f.icon, run: () => Exporter.run(f.k, id) }));
+  const mergeTargets = (n) => {
+    const others = state.notes.filter((x) => x.id !== n.id && !x.deleted && !x.trashed && !x.locked)
+      .sort((a, b) => b.updated - a.updated).slice(0, 12);
+    return others.length ? others.map((x) => ({ label: info(x).title, icon: '📄', run: () => Extras.mergeInto(n.id, x.id) }))
+      : [{ label: 'No other notes to merge into', icon: '', run: () => {} }];
+  };
   function noteMenuItems(n) {
     if (n.trashed) return [
       { label: 'Restore', icon: '↩', run: () => trash(n.id, false) },
@@ -808,7 +829,7 @@
     ];
     const folders = state.folders.filter((f) => !f.deleted);
     const sealed = n.locked && !isUnlocked(n.id);
-    const contentsOnly = new Set(sealed ? ['Rename', 'Duplicate', 'Share…', 'Copy text', 'Export'] : n.locked ? ['Duplicate'] : []);   // need the text, or would copy it unencrypted
+    const contentsOnly = new Set(sealed ? ['Rename', 'Duplicate', 'Share…', 'Copy text', 'Export', 'Version history…', 'Merge with another note…', 'Publish to web…', 'Publish to web ✓'] : n.locked ? ['Duplicate'] : []);   // need the text, or would copy it unencrypted
     return [
       { label: 'Open', icon: '↗', run: () => openNote(n.id) },
       { label: 'Rename', icon: '✎', run: () => startRename(n.id) },
@@ -822,8 +843,12 @@
       { label: 'Share…', icon: Media.ICONS.share, run: () => Media.share(n.id) },
       { label: 'Copy text', icon: '⎘', run: () => copyNoteText(n.id) },
       { label: 'Export', icon: '⤓', sub: exportItems(n.id) },
+      { label: 'Version history…', icon: '↺', run: () => Extras.history(n.id) },
+      { label: 'Merge with another note…', icon: '⇄', sub: mergeTargets(n) },
+      { label: n.pub ? 'Publish to web ✓' : 'Publish to web…', icon: '🌐', run: () => Extras.publish(n.id) },
       { sep: true },
-      ...(n.locked ? (sealed ? [] : [{ label: 'Lock now', icon: LOCK_MARK, run: () => lockNow(n.id) }, { label: 'Remove lock', icon: LOCK_MARK, run: () => removeLock(n.id) }])
+      ...(n.locked ? (sealed ? [] : [{ label: 'Lock now', icon: LOCK_MARK, run: () => lockNow(n.id) }, { label: 'Remove lock', icon: LOCK_MARK, run: () => removeLock(n.id) },
+        { label: Extras.hasBio(n.id) ? 'Turn off fingerprint / Face ID' : 'Fingerprint / Face ID unlock…', icon: LOCK_MARK, run: () => (Extras.hasBio(n.id) ? Extras.bioDisable(n.id) : Extras.bioEnable(n.id)) }])
         : [{ label: 'Lock with password…', icon: LOCK_MARK, run: () => askLockPassword(n.id) }]),
       { label: n.archived ? 'Unarchive' : 'Archive', icon: ICON_SVG('archive'), run: () => setArchived(n.id, !n.archived) },
       { label: 'Move to Trash', icon: '🗑', run: () => trash(n.id, true) },
@@ -1415,7 +1440,7 @@
     }
     await pool(need, 4, async ([nid, f, ru]) => {
       const j = await (await drive(`/drive/v3/files/${f.id}?alt=media`)).json();
-      const n = { id: nid, folder: j.folder || null, pinned: !!j.pinned, pinTop: !!j.pinTop, archived: !!j.archived, trashed: !!j.trashed, deleted: false, locked: !!j.locked, lockTitle: j.lockTitle, enc: j.enc, html: j.html || '', created: j.created || ru, updated: ru, sv: ru, fid: f.id };
+      const n = { id: nid, folder: j.folder || null, pinned: !!j.pinned, pinTop: !!j.pinTop, archived: !!j.archived, trashed: !!j.trashed, deleted: false, locked: !!j.locked, lockTitle: j.lockTitle, enc: j.enc, pub: j.pub || undefined, html: j.html || '', created: j.created || ru, updated: ru, sv: ru, fid: f.id };
       const l = byId(nid);
       if (l) Object.assign(l, n); else state.notes.push(n);
       changed.add(nid);
@@ -1475,7 +1500,7 @@
         }
         delete n.fid; n.sv = u; return;
       }
-      const content = { id: n.id, folder: n.folder || null, pinned: !!n.pinned, pinTop: !!n.pinTop, archived: !!n.archived, trashed: !!n.trashed, locked: !!n.locked, lockTitle: n.lockTitle, enc: n.enc, html: n.locked ? '' : n.html || '', created: n.created || u, updated: u };
+      const content = { id: n.id, folder: n.folder || null, pinned: !!n.pinned, pinTop: !!n.pinTop, archived: !!n.archived, trashed: !!n.trashed, locked: !!n.locked, lockTitle: n.lockTitle, enc: n.enc, pub: n.pub || undefined, html: n.locked ? '' : n.html || '', created: n.created || u, updated: u };
       const meta = { name: fileName(n), appProperties: { kind: 'note', nid: n.id, updated: String(u) } };
       if (n.fid) {
         try { await upload('PATCH', `/upload/drive/v3/files/${n.fid}?uploadType=multipart&fields=id`, meta, content); }
@@ -1887,11 +1912,14 @@
       state.notes.unshift(n); persist(); renderAll();
       return n.id;
     },
+    drive: { api: drive, upload, ensureFolder, signedIn: () => !!auth },   // for Extras: publish to web
+    unlockWithKey,
   });
   Planner.init(core);
   Blocks.init(core);
   Exporter.init(core);
   Media.init(core);
+  if (window.Extras) Extras.init(core);
   plannerReady = true;
   if (Planner.isView(view.type)) setView(view.type);
   else {
@@ -1899,6 +1927,11 @@
     const first = visibleNotes()[0];
     if (first && innerWidth > 900) openNote(first.id);
   }
+  if (/[?&]new=1/.test(location.search)) {               // the installed app's "New note" shortcut
+    history.replaceState(null, '', location.pathname);
+    newNote();
+  }
+  if (native && native.onQuickNote) native.onQuickNote(() => newNote());   // Windows global hotkey
   addEventListener('resize', () => core.layout());
   initSync();
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
