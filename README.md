@@ -58,7 +58,7 @@ A fast, private notes app and day planner for **Mac**, **Windows**, **iPhone** a
 
 | Platform | How |
 | --- | --- |
-| **Mac** (Apple silicon) | Download `Notes.dmg` from the [latest release](https://github.com/imranseoxpert/notes/releases/latest), open it and drag Notes to Applications. The app isn't notarized by Apple, so the first time, right-click Notes → **Open** → **Open**. |
+| **Mac** (Apple silicon) | Download `Notes.dmg` from the [latest release](https://github.com/imranseoxpert/notes/releases/latest), open it and drag Notes to Applications. (If your Mac won't open the disk image, use `Notes-Mac.zip` instead: unzip it and drag Notes to Applications.) The app isn't notarized by Apple, so the first time, right-click Notes → **Open** → **Open**. |
 | **Windows** (64-bit) | Download `Notes-Setup-x64.exe` and run it: it installs Notes with Start Menu and desktop shortcuts (no admin rights needed; uninstall from Settings → Apps). If SmartScreen warns, choose **More info** → **Run anyway**. Prefer no installer? Unzip `Notes-Windows-x64.zip` and run `Notes.exe`. |
 | **iPhone / iPad** | Open [the web app](https://imranseoxpert.github.io/notes/) in **Safari**, tap Share → **Add to Home Screen**. |
 | **Any browser** | Open [the web app](https://imranseoxpert.github.io/notes/). |

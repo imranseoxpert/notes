@@ -18,9 +18,18 @@ iconutil -c icns build/AppIcon.iconset -o $APP/Contents/Resources/AppIcon.icns
 codesign --force --deep -s - $APP
 echo "Built $APP"
 
-# Disk image with an Applications shortcut for drag-to-install
+# Disk image with an Applications shortcut for drag-to-install.
+# HFS+, not the APFS that hdiutil picks by default on current macOS: an APFS image
+# built on the CI runner was refused by a user's Mac (DiskImages error 3840),
+# while HFS+ images mount on every macOS version this app supports.
 rm -rf build/dmg && mkdir build/dmg
 cp -R $APP build/dmg/
 ln -s /Applications build/dmg/Applications
-hdiutil create -volname "Notes" -srcfolder build/dmg -ov -format UDZO build/Notes.dmg >/dev/null
+hdiutil create -volname "Notes" -fs HFS+ -srcfolder build/dmg -ov -format UDZO build/Notes.dmg >/dev/null
 echo "Built build/Notes.dmg"
+
+# The same app as a plain zip, for anyone whose Mac won't mount the image:
+# unzip it and drag Notes to Applications.
+rm -f build/Notes-Mac.zip
+ditto -c -k --keepParent $APP build/Notes-Mac.zip
+echo "Built build/Notes-Mac.zip"
