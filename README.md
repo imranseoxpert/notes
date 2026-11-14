@@ -13,7 +13,7 @@ A fast, private notes app and day planner for **Mac**, **Windows**, **iPhone** a
 - `[[Note links]]` with backlinks, `#tags`, folders, favorites, trash, daily notes
 - Markdown shortcuts (`#`, `-`, `1.`, `[]`, `>`) and Markdown / Obsidian / Joplin import
 - Smart folders: saved searches (text, tag, folder, what's inside, recency) that fill themselves in the sidebar
-- Find & replace in one note or in every note (Ctrl/Cmd+H), word and character counts with reading time
+- Word and character counts with reading time, in the editor's status bar
 - Version history: earlier versions of each note, kept on the device as you write — view or restore any of them
 - Merge two notes into one (links to the old note are updated for you)
 - A note-link graph: every note a dot, every `[[link]]` a line — click a dot to open it

@@ -1,4 +1,4 @@
-/* Extras: smart folders (saved searches), find & replace, version history, note merge, Evernote (.enex) import,
+/* Extras: smart folders (saved searches), version history, note merge, Evernote (.enex) import,
    the note-link graph, LaTeX maths blocks, handwriting-to-text, dictation, on-device audio transcription,
    "publish to web" through Google Drive, fingerprint / Face ID unlock for locked notes, and an app lock.
    Everything here runs on this device: no server of ours and no API key. Works through the `core` object
@@ -89,138 +89,6 @@
       { sep: true },
       { label: 'Delete smart folder', icon: '✕', danger: true, run: () => { const s = xstore(); s.smart = (s.smart || []).filter((d) => d.id !== id); xsave(s); C.renderAll(); C.toast('Smart folder deleted: the notes themselves are untouched'); } },
     ]);
-  }
-
-  // ================= Find & replace =================
-  let fr = null;   // { bar, matches: [Range-ish {node, at, len}], at: index }
-  function frClose() { if (fr) { fr.bar.remove(); fr = null; } }
-  function frWalk(root, fn) {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode: (t) => {
-        if (!t.nodeValue || !t.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-        const p = t.parentElement;
-        if (!p || p.closest('figure, .blk-doc, .blk-board, .blk-toc, .blk-mindmap, a.nlink, [contenteditable="false"]')) return NodeFilter.FILTER_REJECT;
-        return NodeFilter.FILTER_ACCEPT;
-      },
-    });
-    const nodes = [];
-    for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n);
-    nodes.forEach(fn);
-  }
-  function frFind(root, q, matchCase) {
-    const out = [];
-    if (!q) return out;
-    const needle = matchCase ? q : q.toLowerCase();
-    frWalk(root, (t) => {
-      const hay = matchCase ? t.nodeValue : t.nodeValue.toLowerCase();
-      let at = hay.indexOf(needle);
-      while (at >= 0) { out.push({ node: t, at, len: q.length }); at = hay.indexOf(needle, at + Math.max(1, q.length)); }
-    });
-    return out;
-  }
-  function frSelect(i) {
-    if (!fr || !fr.matches.length) return;
-    fr.at = ((i % fr.matches.length) + fr.matches.length) % fr.matches.length;
-    const m = fr.matches[fr.at];
-    const r = document.createRange();
-    try { r.setStart(m.node, m.at); r.setEnd(m.node, m.at + m.len); } catch { return; }
-    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
-    const el = m.node.parentElement; if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
-    $('.fr-count', fr.bar).textContent = `${fr.at + 1} of ${fr.matches.length}`;
-  }
-  function frRefresh() {
-    if (!fr) return;
-    const q = $('.fr-find', fr.bar).value, mc = $('.fr-case', fr.bar).checked;
-    fr.matches = frFind(ed, q, mc);
-    $('.fr-count', fr.bar).textContent = q ? (fr.matches.length ? `1 of ${fr.matches.length}` : 'No matches') : '';
-    if (fr.matches.length) frSelect(0);
-  }
-  function frReplaceOne() {
-    if (!fr || !fr.matches.length) return;
-    const rep = $('.fr-rep', fr.bar).value;
-    frSelect(fr.at);
-    document.execCommand('insertText', false, rep);
-    C.onEdit();
-    setTimeout(frRefresh, 30);
-  }
-  function frReplaceAllNote() {
-    if (!fr) return;
-    const q = $('.fr-find', fr.bar).value, rep = $('.fr-rep', fr.bar).value, mc = $('.fr-case', fr.bar).checked;
-    if (!q) return;
-    let count = 0;
-    frWalk(ed, (t) => {
-      const needle = mc ? q : q.toLowerCase();
-      const hay = mc ? t.nodeValue : t.nodeValue.toLowerCase();
-      if (!hay.includes(needle)) return;
-      let out = '', i = 0, at;
-      while ((at = (mc ? t.nodeValue : t.nodeValue.toLowerCase()).indexOf(needle, i)) >= 0) { out += t.nodeValue.slice(i, at) + rep; i = at + q.length; count++; }
-      t.nodeValue = out + t.nodeValue.slice(i);
-    });
-    if (count) { C.onEdit(); C.toast(`Replaced ${count} in this note`); } else C.toast('No matches in this note');
-    setTimeout(frRefresh, 30);
-  }
-  function frReplaceAllNotes() {
-    if (!fr) return;
-    const q = $('.fr-find', fr.bar).value, rep = $('.fr-rep', fr.bar).value, mc = $('.fr-case', fr.bar).checked;
-    if (!q) return;
-    if (!confirm(`Replace every “${q}” with “${rep}” in ALL notes? Locked and trashed notes are skipped. This can't be undone except through each note's History.`)) return;
-    const tmp = document.createElement('div');
-    let total = 0, notes = 0;
-    for (const n of C.state().notes) {
-      if (n.deleted || n.trashed || n.locked) continue;
-      tmp.innerHTML = n.html;
-      let count = 0;
-      frWalk(tmp, (t) => {
-        const needle = mc ? q : q.toLowerCase();
-        if (!(mc ? t.nodeValue : t.nodeValue.toLowerCase()).includes(needle)) return;
-        let out = '', i = 0, at;
-        while ((at = (mc ? t.nodeValue : t.nodeValue.toLowerCase()).indexOf(needle, i)) >= 0) { out += t.nodeValue.slice(i, at) + rep; i = at + q.length; count++; }
-        t.nodeValue = out + t.nodeValue.slice(i);
-      });
-      if (count) { snapshot(n, true); n.html = tmp.innerHTML; n.updated = Date.now(); total += count; notes++; }
-    }
-    if (total) { C.persist(); C.renderAll(); const cur = C.byId(C.currentId()); if (cur) { ed.innerHTML = cur.html; Blocks.hydrate(ed); } C.toast(`Replaced ${total} in ${notes} note${notes === 1 ? '' : 's'}`); }
-    else C.toast('No matches in any note');
-  }
-  function openFindReplace() {
-    if (fr) { $('.fr-find', fr.bar).focus(); return; }
-    if (!C.currentId()) { C.toast('Open a note first.'); return; }
-    const bar = document.createElement('div');
-    bar.className = 'fr-bar'; bar.id = 'frBar';
-    bar.innerHTML = `
-      <input class="fr-find" type="search" placeholder="Find" aria-label="Find">
-      <input class="fr-rep" type="text" placeholder="Replace with" aria-label="Replace with">
-      <label class="fr-casewrap" title="Match case"><input type="checkbox" class="fr-case"> Aa</label>
-      <span class="fr-count" aria-live="polite"></span>
-      <button data-fr="prev" title="Previous match">↑</button>
-      <button data-fr="next" title="Next match">↓</button>
-      <button data-fr="one">Replace</button>
-      <button data-fr="note">All in note</button>
-      <button data-fr="notes">All notes</button>
-      <button data-fr="close" title="Close (Esc)">✕</button>`;
-    $('#editorWrap').prepend(bar);
-    fr = { bar, matches: [], at: 0 };
-    const sel = getSelection();
-    if (sel && !sel.isCollapsed && ed.contains(sel.anchorNode)) $('.fr-find', bar).value = sel.toString().slice(0, 80);
-    bar.addEventListener('input', (e) => { if (e.target.classList.contains('fr-find') || e.target.classList.contains('fr-case')) frRefresh(); });
-    bar.addEventListener('change', (e) => { if (e.target.classList.contains('fr-case')) frRefresh(); });
-    bar.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { frClose(); ed.focus(); }
-      if (e.key === 'Enter' && e.target.classList.contains('fr-find')) { e.preventDefault(); frSelect(fr.at + 1); }
-      e.stopPropagation();
-    });
-    bar.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-fr]'); if (!b) return;
-      const k = b.dataset.fr;
-      if (k === 'close') frClose();
-      if (k === 'prev') frSelect(fr.at - 1);
-      if (k === 'next') frSelect(fr.at + 1);
-      if (k === 'one') frReplaceOne();
-      if (k === 'note') frReplaceAllNote();
-      if (k === 'notes') frReplaceAllNotes();
-    });
-    $('.fr-find', bar).focus();
-    frRefresh();
   }
 
   // ================= Version history (kept on this device) =================
@@ -900,7 +768,6 @@
       );
     }
     const gb = $('#graphBtn'); if (gb) gb.onclick = openGraph;
-    const frb = $('#frBtn'); if (frb) frb.onclick = openFindReplace;
     const al = $('#appLockBtn'); if (al) al.onclick = appLockForm;
     const enex = $('#importEnex');
     if (enex) enex.addEventListener('change', async (e) => {
@@ -909,7 +776,6 @@
       try { await importEnex(f); } catch (err) { C.toast('Evernote import failed: ' + err.message); }
     });
     document.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'h' && C.currentId() && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); openFindReplace(); }
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'l' && alock().check) { e.preventDefault(); lockAppNow(); }
     });
     ed.addEventListener('dblclick', (e) => {
@@ -931,6 +797,6 @@
     matchSmart: (id, n) => { const d = smartDef(id); return d ? smartMatch(d, n) : false; },
     noteSaved: (n) => snapshot(n), noteSeen, history: historyModal, mergeInto, publish,
     bioEnable, bioDisable, hasBio: (id) => !!bioAll()[id], lockShown,
-    insertMath: () => mathForm(null, null), renderMath, openGraph, openFindReplace,
+    insertMath: () => mathForm(null, null), renderMath, openGraph,
   };
 })();
