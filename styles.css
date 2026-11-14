@@ -54,8 +54,8 @@ html, body { overflow: hidden; }
 .nav:hover .del { display: inline; }
 .nav:hover .count { display: none; }
 .folder-input { width: 100%; margin: 4px 0; padding: 5px 8px; border: 1px solid var(--accent); border-radius: 6px; background: var(--bg); outline: none; }
-.side-foot { margin-top: auto; padding: 12px 10px 0; display: flex; gap: 14px; }
-.link-btn { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; padding: 0; }
+.side-foot { margin-top: auto; padding: 12px 10px 0; display: flex; gap: 14px; align-items: baseline; }
+.link-btn { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; font-family: inherit; line-height: 1.35; padding: 0; }
 .link-btn:hover { color: var(--text); text-decoration: underline; }
 
 /* List */
