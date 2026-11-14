@@ -93,7 +93,8 @@ html, body { overflow: hidden; }
 .editor-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 /* One line: if the window is too narrow for every tool, the toolbar scrolls sideways rather than wrapping */
 .topbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
-.toolbar { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
+.toolbar { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.toolbar::-webkit-scrollbar { display: none; }
 .toolbar > * { flex: none; }
 .toolbar button { border: 0; background: none; min-width: 30px; height: 30px; border-radius: 6px; cursor: pointer; padding: 0 6px; }
 .toolbar button:hover { background: var(--bg-hover); }
@@ -684,6 +685,10 @@ html, body { overflow: hidden; }
 .fmt-row .fmt-swatch { width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1px solid var(--line); }
 .fmt-row .fmt-swatch:hover { outline: 2px solid var(--text); outline-offset: 1px; }
 .fmt-swatch.clear { background: linear-gradient(135deg, var(--bg) 46%, #e5484d 46% 54%, var(--bg) 54%); }
+.head-pop { width: 220px; max-height: 70vh; overflow-y: auto; }
+.head-pop button { border: 0; background: none; color: var(--text); text-align: left; padding: 5px 10px; border-radius: 6px; cursor: pointer; line-height: 1.25; white-space: nowrap; overflow: hidden; }
+.head-pop button:hover, .head-pop button.on { background: var(--bg-hover); }
+.mini-pop { position: fixed; z-index: 60; }
 
 /* Locked notes */
 .lock-screen { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center; }

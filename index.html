@@ -44,8 +44,9 @@ try { var t = localStorage.getItem('notes-theme'); document.documentElement.data
     <div class="side-foot">
       <button class="link-btn" id="exportAll">Backup</button>
       <label class="link-btn">Restore<input type="file" id="importFile" accept="application/json" hidden></label>
-      <label class="link-btn" title="Import Markdown or text files (Obsidian, Joplin, Bear…)">Import .md<input type="file" id="importMd" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple hidden></label>
-      <label class="link-btn" title="Import an Evernote export (.enex)">Import .enex<input type="file" id="importEnex" accept=".enex,application/xml,text/xml" hidden></label>
+      <button class="link-btn" id="importBtn" title="Import notes from another app" aria-haspopup="true">Import</button>
+      <input type="file" id="importMd" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple hidden>
+      <input type="file" id="importEnex" accept=".enex,application/xml,text/xml" hidden>
       <button class="link-btn" id="frBtn" title="Find and replace, in this note or in all notes">Find &amp; replace</button>
       <button class="link-btn" id="appLockBtn" title="Ask for a password when Notes is opened on this device">App lock</button>
     </div>
@@ -86,9 +87,7 @@ try { var t = localStorage.getItem('notes-theme'); document.documentElement.data
         <div class="toolbar" id="toolbar">
           <button data-cmd="insert" title="Insert a block (or type / in the note)" class="tb-insert">＋</button>
           <span class="sep"></span>
-          <button data-cmd="h1" title="Heading 1">H1</button>
-          <button data-cmd="h2" title="Heading 2">H2</button>
-          <button data-cmd="h3" title="Heading 3">H3</button>
+          <button data-cmd="headings" title="Headings" aria-haspopup="true" class="tb-head">Headings</button>
           <span class="sep"></span>
           <button data-cmd="bold" title="Bold (Ctrl/Cmd+B)"><b>B</b></button>
           <button data-cmd="italic" title="Italic (Ctrl/Cmd+I)"><i>I</i></button>

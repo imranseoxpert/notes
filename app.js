@@ -465,6 +465,7 @@
       case 'media': Media.openMenu($('#toolbar [data-cmd="media"]')); return;
       case 'sketch': Media.addSketch(); return;
       case 'format': toggleFormat($('#toolbar [data-cmd="format"]')); return;
+      case 'headings': toggleHeadings($('#toolbar [data-cmd="headings"]')); return;
       case 'quote': block('blockquote'); break;
       case 'code': block('pre'); break;
       case 'ul': document.execCommand('insertUnorderedList'); break;
@@ -542,6 +543,41 @@
   document.addEventListener('mousedown', (e) => { if (fmtPop && !fmtPop.el.contains(e.target) && !fmtPop.btn.contains(e.target)) closeFormat(); }, true);
   document.addEventListener('keydown', (e) => { if (fmtPop && e.key === 'Escape') { closeFormat(); } }, true);
 
+  // Headings picker: one toolbar button opens a list where each heading is shown at its real size,
+  // biggest (Heading 1) to smallest (Heading 6), with Normal text to turn a heading back into a paragraph.
+  let headPop = null;
+  function closeHeadings() { if (headPop) { headPop.el.remove(); headPop = null; } }
+  function toggleHeadings(btn) {
+    if (headPop) return closeHeadings();
+    closeFormat();
+    const sel = getSelection();
+    const saved = sel.rangeCount && $('#editor').contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+    let cur = '';
+    try { cur = (document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, ''); } catch {}
+    const rows = [['div', 'Normal text', 15, 400], ['h1', 'Heading 1', 30, 700], ['h2', 'Heading 2', 22, 700], ['h3', 'Heading 3', 18, 700], ['h4', 'Heading 4', 16, 700], ['h5', 'Heading 5', 13, 700], ['h6', 'Heading 6', 11, 700]];
+    const el = document.createElement('div');
+    el.className = 'fmt-pop head-pop'; el.setAttribute('role', 'menu'); el.setAttribute('aria-label', 'Headings');
+    el.innerHTML = rows.map(([tag, name, size, weight]) => `<button data-tag="${tag}" role="menuitem" style="font-size:${size}px;font-weight:${weight}"${cur === tag || (tag === 'div' && (cur === 'div' || cur === 'p' || cur === '')) ? ' class="on"' : ''}>${name}</button>`).join('');
+    document.body.appendChild(el);
+    const r = btn.getBoundingClientRect(), w = el.getBoundingClientRect().width;
+    el.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+    el.style.top = r.bottom + 4 + 'px';
+    el.addEventListener('mousedown', (e) => e.preventDefault());           // keeps your text selected
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-tag]'); if (!b) return;
+      const tag = b.dataset.tag;
+      closeHeadings();
+      ed().focus();
+      if (!ed().contains(getSelection().anchorNode) && saved) { getSelection().removeAllRanges(); getSelection().addRange(saved); }
+      if (tag === 'div') document.execCommand('formatBlock', false, 'div');
+      else block(tag);
+      onEdit(); updateToolbar();
+    });
+    headPop = { el, btn };
+  }
+  document.addEventListener('mousedown', (e) => { if (headPop && !headPop.el.contains(e.target) && !headPop.btn.contains(e.target)) closeHeadings(); }, true);
+  document.addEventListener('keydown', (e) => { if (headPop && e.key === 'Escape') { closeHeadings(); } }, true);
+
   // Wrap the selected text in <mark> (or unwrap if it is all highlighted already). execCommand's hiliteColor
   // can't take our theme colour, so this works on the DOM directly and handles multi-paragraph selections.
   function toggleHighlight() {
@@ -599,7 +635,7 @@
         if (['bold', 'italic', 'underline', 'strikeThrough'].includes(c)) on = document.queryCommandState(c);
         else if (c === 'ul') on = document.queryCommandState('insertUnorderedList');
         else if (c === 'ol') on = document.queryCommandState('insertOrderedList');
-        else if (['h1', 'h2'].includes(c)) on = document.queryCommandValue('formatBlock').toLowerCase() === c;
+        else if (c === 'headings') on = /^h[1-6]$/.test((document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, ''));
         else if (c === 'highlight') { const a = getSelection().anchorNode; on = !!(a && (a.nodeType === 3 ? a.parentNode : a).closest('mark')); }
       } catch {}
       b.classList.toggle('on', on);
@@ -1201,6 +1237,30 @@
     openNoteMenu(currentId, r.right - 230, r.bottom + 4, exportItems(currentId));
   };
   $('#exportAll').onclick = () => download('notes-backup-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(state, sealedOnly, 2), 'application/json');
+  // One Import button: a small menu picks the format, then the matching (hidden) file input opens.
+  let importPop = null;
+  const closeImport = () => { if (importPop) { importPop.el.remove(); importPop = null; } };
+  $('#importBtn').onclick = () => {
+    if (importPop) return closeImport();
+    const btn = $('#importBtn');
+    const el = document.createElement('div');
+    el.className = 'ctx-menu mini-pop'; el.setAttribute('role', 'menu'); el.setAttribute('aria-label', 'Import');
+    el.innerHTML = `
+      <button class="ctx-item" data-import="md" role="menuitem"><span class="ctx-ic"></span>Markdown / text (.md)</button>
+      <button class="ctx-item" data-import="enex" role="menuitem"><span class="ctx-ic"></span>Evernote (.enex)</button>`;
+    document.body.appendChild(el);
+    const r = btn.getBoundingClientRect(), h = el.getBoundingClientRect().height;
+    el.style.left = Math.max(8, Math.min(r.left, innerWidth - el.getBoundingClientRect().width - 8)) + 'px';
+    el.style.top = Math.max(8, r.top - h - 4) + 'px';       // opens upward: the button sits at the foot of the sidebar
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-import]'); if (!b) return;
+      closeImport();
+      (b.dataset.import === 'enex' ? $('#importEnex') : $('#importMd')).click();
+    });
+    importPop = { el, btn };
+  };
+  document.addEventListener('mousedown', (e) => { if (importPop && !importPop.el.contains(e.target) && !importPop.btn.contains(e.target)) closeImport(); }, true);
+  document.addEventListener('keydown', (e) => { if (importPop && e.key === 'Escape') closeImport(); }, true);
   $('#importFile').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
     try {
