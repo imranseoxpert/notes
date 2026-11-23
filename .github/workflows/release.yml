@@ -78,15 +78,22 @@ jobs:
     if: ${{ always() && needs.windows-and-web.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
+      # One folder per artifact (no merging): when both Mac builds succeed, their files have the same names, and
+      # merging them wrote one Notes.dmg over the other and published a corrupt mix (error 3840 on open).
       - uses: actions/download-artifact@v4
         with:
           path: out
-          merge-multiple: true
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if ! find out -type f -name 'Notes.dmg' | grep -q .; then echo "No Mac build succeeded, so nothing was published."; exit 1; fi
+          MAC=""
+          for d in out/mac-macos-latest out/mac-macos-15-intel; do
+            if [ -n "$(find "$d" -type f -name 'Notes.dmg' 2>/dev/null)" ]; then MAC="$d"; break; fi
+          done
+          if [ -z "$MAC" ]; then echo "No Mac build succeeded, so nothing was published."; exit 1; fi
+          echo "Mac files from $MAC"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo "$TAG is already published."; exit 0; fi
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "Notes $TAG" --generate-notes \
-            $(find out -type f \( -name 'Notes.dmg' -o -name 'Notes-Mac.zip' -o -name 'Notes-Setup-x64.exe' -o -name 'Notes-Windows-x64.zip' -o -name 'Notes-iPhone-Web.zip' \))
+            $(find "$MAC" -type f \( -name 'Notes.dmg' -o -name 'Notes-Mac.zip' \)) \
+            $(find out/windows-and-web -type f \( -name 'Notes-Setup-x64.exe' -o -name 'Notes-Windows-x64.zip' -o -name 'Notes-iPhone-Web.zip' \))

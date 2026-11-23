@@ -26,6 +26,7 @@ rm -rf build/dmg && mkdir build/dmg
 cp -R $APP build/dmg/
 ln -s /Applications build/dmg/Applications
 hdiutil create -volname "Notes" -fs HFS+ -srcfolder build/dmg -ov -format UDZO build/Notes.dmg >/dev/null
+hdiutil verify build/Notes.dmg >/dev/null    # never ship an image macOS can't open (stops the build here)
 echo "Built build/Notes.dmg"
 
 # The same app as a plain zip, for anyone whose Mac won't mount the image:
